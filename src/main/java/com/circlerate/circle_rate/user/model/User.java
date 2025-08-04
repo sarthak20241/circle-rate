@@ -1,5 +1,6 @@
 package com.circlerate.circle_rate.user.model;
 
+import com.circlerate.circle_rate.auth.model.LoginType;
 import com.circlerate.circle_rate.auth.model.Role;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -26,16 +27,18 @@ public class User implements UserDetails {
     private String firstName;
     private String lastName;
     private String encodedPassword;
+    private LoginType loginType;
     private Role role;
     private Date createdAt;
     private UserProfile userProfile;
 
-    public User(String email, String encodedPassword, String firstName, String lastName){
+    public User(String email, String encodedPassword, String firstName, String lastName, LoginType loginType){
         this.email=email;
         this.encodedPassword = encodedPassword;
         this.firstName=firstName;
         this.lastName=lastName;
         this.createdAt = new Date();
+        this.loginType = loginType;
     }
 
     public boolean isUserRoleAllowed(Role role) {

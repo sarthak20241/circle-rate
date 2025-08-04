@@ -6,6 +6,7 @@ import com.circlerate.circle_rate.auth.payload.LoginRequest;
 import com.circlerate.circle_rate.auth.payload.SignupRequest;
 import com.circlerate.circle_rate.user.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,12 +18,12 @@ public class AuthController {
     UserService userService;
 
     @PostMapping("/signup")
-    public ResponseEntity<AuthResponse> signupUser(@RequestBody SignupRequest user, HttpServletResponse response){
+    public ResponseEntity<AuthResponse> signupUser(@RequestBody @Valid SignupRequest user, HttpServletResponse response){
         return userService.signup(user,response);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> loginUser(@RequestBody LoginRequest request, HttpServletResponse response){
+    public ResponseEntity<AuthResponse> loginUser(@RequestBody @Valid LoginRequest request, HttpServletResponse response){
         return userService.login(request, response);
     }
 

@@ -1,8 +1,8 @@
 package com.circlerate.circle_rate.user.service;
 
 import com.circlerate.circle_rate.auth.model.AccessToken;
+import com.circlerate.circle_rate.auth.model.LoginType;
 import com.circlerate.circle_rate.auth.model.RefreshToken;
-import com.circlerate.circle_rate.auth.model.Role;
 import com.circlerate.circle_rate.auth.payload.AuthResponse;
 import com.circlerate.circle_rate.auth.payload.LoginRequest;
 import com.circlerate.circle_rate.auth.payload.SignupRequest;
@@ -11,6 +11,7 @@ import com.circlerate.circle_rate.auth.service.JwtService;
 import com.circlerate.circle_rate.common.constants.ResponseMessage;
 import com.circlerate.circle_rate.user.model.User;
 import com.circlerate.circle_rate.user.repository.UserRepository;
+import com.circlerate.circle_rate.user.utils.UserServiceUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,41 +28,27 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.util.Optional;
 
+import static com.circlerate.circle_rate.config.ApplicationConfig.isLocal;
+
 @Slf4j
 @Service
 public class UserService {
     @Autowired
     UserRepository userRepository;
     @Autowired
-    PasswordEncoder passwordEncoder;
-    @Autowired
-    ApprovalService approvalService;
-    @Autowired
     JwtService jwtService;
     @Autowired
     AuthenticationManager authenticationManager;
     @Autowired
     RefreshTokenRepository refreshTokenRepository;
+    @Autowired
+    UserServiceUtils userServiceUtils;
 
-    private final boolean isLocal = false;
+
 
     public ResponseEntity<AuthResponse> signup(SignupRequest request, HttpServletResponse response) {
-        if(userRepository.existsByEmail(request.getEmail())){
-            log.info("User already exists with email : {}", request.getEmail());
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(new AuthResponse(request.getEmail(),ResponseMessage.USER_ALREADY_EXISTS));
-        }
-        String encodedPassword = passwordEncoder.encode(request.getPassword());
-        User user = new User(request.getEmail(),encodedPassword,request.getFirstName(),request.getLastName());
-        if(request.getRole()!= Role.USER){
-            log.info("Approval Raised for user: {} for role: {}", request.getEmail(), request.getRole());
-            approvalService.requestApproval(user,request.getRole());
-            user.setRole(Role.TEMP_ROLE);
-        }
-        else{
-            user.setRole(request.getRole());
-        }
-        User savedUser = userRepository.save(user);
+        request.setLoginType(LoginType.CUSTOM);
+        User user =userServiceUtils.createUser(request);
         AccessToken accessToken = jwtService.generateAccessToken(user.getEmail(), user.getRole());
         RefreshToken refreshToken = jwtService.generateRefreshToken(user.getEmail());
         ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken.getToken())
@@ -75,10 +62,10 @@ public class UserService {
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
         if((user.getRole() != request.getRole())){
             log.info("user created without role: {} permissions", request.getRole() );
-            return ResponseEntity.status(HttpStatus.CREATED).body(new AuthResponse(savedUser.getId(), savedUser.getEmail(), ResponseMessage.APPROVAL_RAISED, accessToken.getToken()));
+            return ResponseEntity.status(HttpStatus.CREATED).body(new AuthResponse(user.getId(), user.getEmail(), ResponseMessage.APPROVAL_RAISED, accessToken.getToken()));
         }
         log.info("User Successfully Created");
-        return ResponseEntity.status(HttpStatus.CREATED).body(new AuthResponse(savedUser.getId(), savedUser.getEmail(), ResponseMessage.USER_CREATED, accessToken.getToken()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(new AuthResponse(user.getId(), user.getEmail(), ResponseMessage.USER_CREATED, accessToken.getToken()));
     }
 
 
@@ -87,6 +74,11 @@ public class UserService {
         if(optionalUser.isEmpty()){
             log.info("Could not find any user with email : {}",request.getEmail());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new AuthResponse(request.getEmail(),ResponseMessage.USER_NOT_FOUND));
+        }
+        User userFromRepo = optionalUser.get();
+        if(!userFromRepo.getLoginType().equals(LoginType.CUSTOM)){
+            log.info("User logged in with different login type: {}", userFromRepo.getLoginType());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(new AuthResponse(request.getEmail(), ResponseMessage.USER_SIGNEDUP_WITH_DIFFERENT_LOGIN_TYPE + userFromRepo.getLoginType()));
         }
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -113,7 +105,7 @@ public class UserService {
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
         log.info("User Successfully logged in with user email: {}", user.getEmail());
-        return ResponseEntity.status(HttpStatus.OK).body(new AuthResponse(user.getId(), user.getEmail(), ResponseMessage.USER_CREATED, accessToken.getToken()));
+        return ResponseEntity.status(HttpStatus.OK).body(new AuthResponse(user.getId(), user.getEmail(), ResponseMessage.USER_SUCCESSFULLY_LOGGED_IN, accessToken.getToken()));
     }
 
     public ResponseEntity<String> logout(String refreshToken, HttpServletResponse response) {
