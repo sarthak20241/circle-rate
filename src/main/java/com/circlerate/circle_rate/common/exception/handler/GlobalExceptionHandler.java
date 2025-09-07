@@ -1,6 +1,8 @@
 package com.circlerate.circle_rate.common.exception.handler;
 
 import com.circlerate.circle_rate.common.exception.body.ErrorMessage;
+import com.circlerate.circle_rate.common.exception.custom_exception.PropertyAlreadyExists;
+import com.circlerate.circle_rate.common.exception.custom_exception.PropertyNotFound;
 import com.circlerate.circle_rate.common.exception.custom_exception.UserAlreadyExistsException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -12,6 +14,21 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(value = PropertyNotFound.class)
+    public ResponseEntity<ErrorMessage> propertyNotFoundException(UserAlreadyExistsException ex){
+        ErrorMessage message = new ErrorMessage(HttpStatus.CONFLICT.value(),ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(message);
+    }
+    @ExceptionHandler(value = PropertyAlreadyExists.class)
+    public ResponseEntity<ErrorMessage> propertyAlreadyExistsException(UserAlreadyExistsException ex){
+        ErrorMessage message = new ErrorMessage(HttpStatus.CONFLICT.value(),ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(message);
+    }
+
     @ExceptionHandler(value = UserAlreadyExistsException.class)
     public ResponseEntity<ErrorMessage> userAlreadyExistsException(UserAlreadyExistsException ex){
         ErrorMessage message = new ErrorMessage(HttpStatus.CONFLICT.value(),ex.getMessage());
@@ -20,6 +37,7 @@ public class GlobalExceptionHandler {
                 .body(message);
     }
 
+    //exception handler for @valid checks
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorMessage> handleValidationExceptions(MethodArgumentNotValidException ex) {
         String errorMsg = ex.getBindingResult().getFieldErrors().stream()

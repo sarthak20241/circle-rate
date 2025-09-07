@@ -4,6 +4,7 @@ import com.circlerate.circle_rate.listing.model.property.Property;
 import com.circlerate.circle_rate.listing.payload.PrimaryFilterRequest;
 import com.circlerate.circle_rate.listing.payload.SecondaryFilterRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -18,11 +19,12 @@ public class PropertyRepositoryImpl implements PropertyRepositoryCustom {
 
     @Override
     public List<Property> getPropertiesByFilters(PrimaryFilterRequest primaryFilters, SecondaryFilterRequest secondaryFilters, int limit, int offset){
-        //todo: add code for offset
         Query query = new Query();
         addPrimaryFiltersToQuery(primaryFilters, query);
         addSecondaryFiltersToQuery(secondaryFilters, query);
+        query.with(Sort.by(Sort.Direction.DESC, "propertyScore"));
         query.limit(limit);
+        query.skip(offset);
         return mongoTemplate.find(query, Property.class);
     }
 

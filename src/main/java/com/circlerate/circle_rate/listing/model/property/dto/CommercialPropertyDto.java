@@ -1,10 +1,18 @@
 package com.circlerate.circle_rate.listing.model.property.dto;
 
 import com.circlerate.circle_rate.listing.model.property.CommercialProperty;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@EqualsAndHashCode(callSuper = true)
+@Data
+@Component
+@NoArgsConstructor
 public class CommercialPropertyDto extends PropertyDto {
     private List<CommercialProperty.Suitability> suitability;
     private int buildingFloor;

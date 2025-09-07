@@ -4,10 +4,18 @@ import com.circlerate.circle_rate.listing.model.property.ResidentialProperty;
 import com.circlerate.circle_rate.listing.model.propertyenums.FurnishingStatus;
 import com.circlerate.circle_rate.listing.model.propertyenums.ResidentialAmenities;
 import com.circlerate.circle_rate.listing.model.propertyenums.SaleType;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@EqualsAndHashCode(callSuper = true)
+@Data
+@Component
+@NoArgsConstructor
 public class ResidentialPropertyDto extends PropertyDto{
     private ResidentialProperty.ResidentialPropertyType residentialPropertyType;
 
