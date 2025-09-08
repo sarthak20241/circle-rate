@@ -89,11 +89,6 @@ public class UserService {
 
         // At this point, authentication is successful
         User user = (User) authentication.getPrincipal();
-        boolean isUserRoleAllowed=user.isUserRoleAllowed(request.getRole());
-        if(!isUserRoleAllowed){
-            log.info("user with email :{} not allowed for role:{}",request.getEmail(),request.getRole());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new AuthResponse(user.getEmail(), ResponseMessage.USER_ROLE_NOT_ALLOWED));
-        }
         AccessToken accessToken = jwtService.generateAccessToken(user.getEmail(), user.getRole());
         RefreshToken refreshToken = jwtService.generateRefreshToken(user.getEmail());
         ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken.getToken())

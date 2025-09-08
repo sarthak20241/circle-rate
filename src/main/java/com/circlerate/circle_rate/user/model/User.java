@@ -41,10 +41,6 @@ public class User implements UserDetails {
         this.loginType = loginType;
     }
 
-    public boolean isUserRoleAllowed(Role role) {
-        return this.role == role;
-    }
-
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
