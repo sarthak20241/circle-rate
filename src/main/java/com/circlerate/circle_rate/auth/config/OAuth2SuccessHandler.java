@@ -51,8 +51,6 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         String firstName = oAuth2User.getAttribute("given_name");
         String lastName = oAuth2User.getAttribute("family_name");
         String email = oAuth2User.getAttribute("email");
-        String state = request.getParameter("state");
-        String role = new String(Base64.getDecoder().decode(state));
         log.info("google authentication successful for email: {} ",email);
 
         User user;
@@ -60,6 +58,16 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         int httpStatus = HttpServletResponse.SC_CREATED;
         if(!userRepository.existsByEmail(email)){
             //google signup
+            String state = request.getParameter("state");
+            String role;
+            try{
+                role = new String(Base64.getDecoder().decode(state));
+            }
+            catch (IllegalArgumentException ex){
+                CommonUtility.writeResponse(response, new ErrorMessage(HttpStatus.FORBIDDEN.value(),"User Not Signed Up"),HttpServletResponse.SC_FORBIDDEN);
+                return;
+            }
+
             SignupRequest signupRequest = new SignupRequest(email,"google-signup",firstName,lastName, Role.valueOf(role), LoginType.GOOGLE);
             try{
                 user = userServiceUtils.createUser(signupRequest);
@@ -80,12 +88,6 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         else{
             //google login
             user = userRepository.findByEmail(email).get();
-            boolean isUserRoleAllowed=user.isUserRoleAllowed(Role.valueOf(role));
-            if(!isUserRoleAllowed){
-                log.info("user with email :{} not allowed for role:{}",email,role);
-                CommonUtility.writeResponse(response, new AuthResponse(user.getEmail(), ResponseMessage.USER_ROLE_NOT_ALLOWED), HttpServletResponse.SC_UNAUTHORIZED);
-                return;
-            }
             if(!user.getLoginType().equals(LoginType.GOOGLE)){
                 log.info("User logged in with different login type: {}", user.getLoginType());
                 CommonUtility.writeResponse(response, new AuthResponse(email, ResponseMessage.USER_SIGNEDUP_WITH_DIFFERENT_LOGIN_TYPE + user.getLoginType()), HttpServletResponse.SC_CONFLICT);

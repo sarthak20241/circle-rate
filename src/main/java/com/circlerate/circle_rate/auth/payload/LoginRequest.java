@@ -10,5 +10,4 @@ public class LoginRequest {
     private String email;
     @NotBlank
     private String password;
-    private Role role;
 }
