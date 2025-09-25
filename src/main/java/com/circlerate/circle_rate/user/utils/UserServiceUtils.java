@@ -10,7 +10,7 @@ import com.circlerate.circle_rate.user.model.User;
 import com.circlerate.circle_rate.user.repository.UserRepository;
 import com.circlerate.circle_rate.user.service.ApprovalService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -18,13 +18,13 @@ import java.util.Optional;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class UserServiceUtils {
-    @Autowired
-    UserRepository userRepository;
-    @Autowired
-    PasswordEncoder passwordEncoder;
-    @Autowired
-    ApprovalService approvalService;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final ApprovalService approvalService;
+
+    
 
     public User createUser(SignupRequest request){
         Optional<User> optionalUser = userRepository.findByEmail(request.getEmail());

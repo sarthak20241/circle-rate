@@ -17,7 +17,7 @@ import com.circlerate.circle_rate.user.utils.UserServiceUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -34,14 +34,13 @@ import static com.circlerate.circle_rate.config.ApplicationConfig.isLocal;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
+    private final JwtService jwtService;
+    private final UserServiceUtils userServiceUtils;
+    private final UserRepository userRepository;
 
-    @Autowired
-    JwtService jwtService;
-    @Autowired
-    UserServiceUtils userServiceUtils;
-    @Autowired
-    UserRepository userRepository;
+    
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,

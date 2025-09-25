@@ -1,7 +1,6 @@
 package com.circlerate.circle_rate.listing.service;
 
 import com.circlerate.circle_rate.common.constants.GlobalConstants;
-import com.circlerate.circle_rate.common.exception.custom_exception.PropertyAlreadyExists;
 import com.circlerate.circle_rate.common.exception.custom_exception.PropertyNotFound;
 import com.circlerate.circle_rate.common.utils.S3Service;
 import com.circlerate.circle_rate.listing.model.FileCategory;
@@ -16,25 +15,22 @@ import com.circlerate.circle_rate.listing.model.property.dto.ResidentialProperty
 import com.circlerate.circle_rate.listing.payload.*;
 import com.circlerate.circle_rate.listing.repository.PropertyRepository;
 import com.circlerate.circle_rate.listing.utils.PropertyUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class PropertyListingService {
-    @Autowired
-    PropertyRepository propertyRepository;
-    @Autowired
-    PropertyUtils propertyUtils;
-    @Autowired
-    S3Service s3Service;
+    private final PropertyRepository propertyRepository;
+    private final PropertyUtils propertyUtils;
+    private final S3Service s3Service;
+
+    
 
     public List<PropertyDto> getPropertyList(PrimaryFilterRequest primaryFilterRequest, SecondaryFilterRequest secondaryFilterRequest, Integer limit, Integer offset){
         List<Property> propertyList =  propertyRepository.getPropertiesByFilters(primaryFilterRequest,secondaryFilterRequest,limit,offset);
@@ -46,15 +42,9 @@ public class PropertyListingService {
         Property savedProperty = propertyRepository.save(property);
         PropertyDto propertyDto;
         switch (property.getPropertyType()) {
-            case RESIDENTIAL -> {
-                propertyDto = new ResidentialPropertyDto((ResidentialProperty) savedProperty);
-            }
-            case COMMERCIAL -> {
-                propertyDto = new CommercialPropertyDto((CommercialProperty) savedProperty);
-            }
-            case LAND -> {
-                propertyDto = new LandPropertyDto((LandProperty) savedProperty);
-            }
+            case RESIDENTIAL -> propertyDto = new ResidentialPropertyDto((ResidentialProperty) savedProperty);
+            case COMMERCIAL -> propertyDto = new CommercialPropertyDto((CommercialProperty) savedProperty);
+            case LAND -> propertyDto = new LandPropertyDto((LandProperty) savedProperty);
             default -> throw new IllegalArgumentException("Unsupported property type: " + property.getPropertyType());
         }
         return propertyDto;

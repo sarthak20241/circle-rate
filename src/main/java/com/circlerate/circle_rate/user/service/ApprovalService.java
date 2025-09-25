@@ -4,13 +4,15 @@ import com.circlerate.circle_rate.auth.model.Role;
 import com.circlerate.circle_rate.user.model.Approval;
 import com.circlerate.circle_rate.user.model.User;
 import com.circlerate.circle_rate.user.repository.ApprovalRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class ApprovalService {
-    @Autowired
-    ApprovalRepository approvalRepository;
+    private final ApprovalRepository approvalRepository;
+
+    
 
     public void requestApproval(User user, Role role){
         Approval approvalRequest= new Approval(user,role);
