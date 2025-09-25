@@ -3,19 +3,19 @@ package com.circlerate.circle_rate.listing.repository;
 import com.circlerate.circle_rate.listing.model.property.Property;
 import com.circlerate.circle_rate.listing.payload.PrimaryFilterRequest;
 import com.circlerate.circle_rate.listing.payload.SecondaryFilterRequest;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Component;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 
 @Component
+@RequiredArgsConstructor
 public class PropertyRepositoryImpl implements PropertyRepositoryCustom {
-    @Autowired
-    MongoTemplate mongoTemplate;
+    private final MongoTemplate mongoTemplate;
 
     @Override
     public List<Property> getPropertiesByFilters(PrimaryFilterRequest primaryFilters, SecondaryFilterRequest secondaryFilters, int limit, int offset){

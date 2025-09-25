@@ -1,7 +1,7 @@
 package com.circlerate.circle_rate.config;
 
 import com.circlerate.circle_rate.user.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,9 +15,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 //services and beans app needs to run
 @Configuration
+@RequiredArgsConstructor
 public class ApplicationConfig {
-    @Autowired
-    private UserRepository userRepo;
+    private final UserRepository userRepo;
 
     public static final boolean isLocal = false;
 

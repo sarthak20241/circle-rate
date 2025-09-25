@@ -2,7 +2,6 @@ package com.circlerate.circle_rate.auth.config;
 
 
 import com.circlerate.circle_rate.auth.service.JwtService;
-//import com.circlerate.circle_rate.auth.service.UserDetailsServiceImpl;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,7 +9,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -28,10 +26,7 @@ import java.util.List;
 @Slf4j
 public class JwtAuthFilter extends OncePerRequestFilter {
 
-    @Autowired
     private final JwtService jwtService;
-//    @Autowired
-//    private final UserDetailsServiceImpl userDetailsService;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,

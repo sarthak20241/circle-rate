@@ -4,7 +4,7 @@ import com.circlerate.circle_rate.listing.model.property.Property;
 import com.circlerate.circle_rate.listing.model.property.dto.PropertyDto;
 import com.circlerate.circle_rate.listing.payload.*;
 import com.circlerate.circle_rate.listing.service.PropertyListingService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,9 +13,11 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/property")
+@RequiredArgsConstructor
 public class PropertyController {
-    @Autowired
-    PropertyListingService propertyListingService;
+    private final PropertyListingService propertyListingService;
+
+    
 
     //todo refer property id in user
     //todo refer property id in locality

@@ -7,15 +7,15 @@ import com.circlerate.circle_rate.auth.payload.SignupRequest;
 import com.circlerate.circle_rate.user.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
+@RequiredArgsConstructor
 public class AuthController {
-    @Autowired
-    UserService userService;
+    private final UserService userService;
 
     @PostMapping("/signup")
     public ResponseEntity<AuthResponse> signupUser(@RequestBody @Valid SignupRequest user, HttpServletResponse response){

@@ -6,7 +6,6 @@ import com.circlerate.circle_rate.auth.config.JwtAuthFilter;
 import com.circlerate.circle_rate.auth.config.OAuth2SuccessHandler;
 import com.circlerate.circle_rate.auth.model.Role;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -30,16 +29,11 @@ import java.util.List;
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
-    @Autowired
-    private JwtAuthFilter jwtAuthFilter;
-    @Autowired
-    private AuthenticationProvider authenticationProvider;
-    @Autowired
-    private OAuth2SuccessHandler successHandler;
-    @Autowired
-    private ClientRegistrationRepository clientRegistrationRepository;
-    @Autowired
-    private AuthEntryPoint unauthorizedHandler;
+    private final JwtAuthFilter jwtAuthFilter;
+    private final AuthenticationProvider authenticationProvider;
+    private final OAuth2SuccessHandler successHandler;
+    private final ClientRegistrationRepository clientRegistrationRepository;
+    private final AuthEntryPoint unauthorizedHandler;
 
 
     @Bean
