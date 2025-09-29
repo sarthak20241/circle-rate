@@ -120,5 +120,70 @@ public class UserService {
         return ResponseEntity.ok("Logged out successfully.");
     }
 
+    public ResponseEntity<AuthResponse> refreshAccessToken(String refreshToken, HttpServletResponse response) {
+        try {
+            String email = jwtService.extractUsername(refreshToken);
+            String tokenId = jwtService.extractTokenId(refreshToken);
+            
+            // Check if refresh token exists
+            if (!refreshTokenRepository.existsById(tokenId)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new AuthResponse(email, ResponseMessage.INVALID_TOKEN));
+            }
+            
+            User user = userRepository.findByEmail(email).orElse(null);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new AuthResponse(email, ResponseMessage.USER_NOT_FOUND));
+            }
+            
+            // Check if refresh token is older than 5 days
+            Optional<RefreshToken> existingToken = refreshTokenRepository.findById(tokenId);
+            boolean shouldRotateToken = false;
+            
+            if (existingToken.isPresent()) {
+                long daysSinceIssued = (System.currentTimeMillis() - existingToken.get().getIssuedAt().getTime()) / (1000 * 60 * 60 * 24);
+                shouldRotateToken = daysSinceIssued >= 5;
+            }
+            
+            AccessToken newAccessToken = jwtService.generateAccessToken(user.getEmail(), user.getRole());
+            AuthResponse authResponse = new AuthResponse(user.getId(), user.getEmail(), ResponseMessage.ACCESS_TOKEN_REFRESHED, newAccessToken.getToken());
+            
+            // If token is older than 5 days, generate new refresh token and delete old one
+            if (shouldRotateToken) {
+                // Delete old refresh token
+                refreshTokenRepository.deleteById(tokenId);
+                // Generate new refresh token
+                com.circlerate.circle_rate.auth.model.RefreshToken newRefreshToken = jwtService.generateRefreshToken(user.getEmail());
+                
+                // Set new refresh token as cookie
+                ResponseCookie cookie = ResponseCookie.from("refreshToken", newRefreshToken.getToken())
+                        .httpOnly(true)
+                        .secure(!isLocal) // Set to false in local dev if not using HTTPS
+                        .path("/auth")
+                        .maxAge(Duration.ofDays(7))
+                        .sameSite("Strict")
+                        .build();
+                response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+            }
+            
+            return ResponseEntity.ok(authResponse);
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new AuthResponse(null, ResponseMessage.INVALID_TOKEN));
+        }
+    }
+
+    public ResponseEntity<String> revokeRefreshToken(String refreshToken) {
+        try {
+            String tokenId = jwtService.extractTokenId(refreshToken);
+            if (refreshTokenRepository.existsById(tokenId)) {
+                refreshTokenRepository.deleteById(tokenId);
+                return ResponseEntity.ok("Refresh token revoked successfully");
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Refresh token not found");
+            }
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid refresh token");
+        }
+    }
+
 
 }
