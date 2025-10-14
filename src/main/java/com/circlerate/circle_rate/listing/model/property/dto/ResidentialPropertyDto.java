@@ -53,9 +53,4 @@ public class ResidentialPropertyDto extends PropertyDto{
                 : null;
     }
 
-    public static ResidentialPropertyDto mapResidentialPropertyToResidentialPropertyDto(ResidentialProperty residentialProperty){
-        return new ResidentialPropertyDto(residentialProperty);
-    }
-
-
 }

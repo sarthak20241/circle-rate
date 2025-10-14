@@ -1,7 +1,9 @@
 package com.circlerate.circle_rate.listing.service;
 
 import com.circlerate.circle_rate.common.constants.GlobalConstants;
-import com.circlerate.circle_rate.common.exception.custom_exception.PropertyNotFound;
+import com.circlerate.circle_rate.common.constants.ResponseMessage;
+import com.circlerate.circle_rate.common.exception.custom_exception.PropertyNotFoundException;
+import com.circlerate.circle_rate.common.exception.custom_exception.PropertyTypeRequiredException;
 import com.circlerate.circle_rate.common.utils.S3Service;
 import com.circlerate.circle_rate.listing.model.FileCategory;
 import com.circlerate.circle_rate.listing.model.property.CommercialProperty;
@@ -13,46 +15,76 @@ import com.circlerate.circle_rate.listing.model.property.dto.LandPropertyDto;
 import com.circlerate.circle_rate.listing.model.property.dto.PropertyDto;
 import com.circlerate.circle_rate.listing.model.property.dto.ResidentialPropertyDto;
 import com.circlerate.circle_rate.listing.payload.*;
-import com.circlerate.circle_rate.listing.repository.PropertyRepository;
-import com.circlerate.circle_rate.listing.utils.PropertyUtils;
+import com.circlerate.circle_rate.listing.repository.ResidentialPropertyRepository;
+import com.circlerate.circle_rate.listing.repository.CommercialPropertyRepository;
+import com.circlerate.circle_rate.listing.repository.LandPropertyRepository;
+import com.circlerate.circle_rate.listing.repository.PropertyQueryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class PropertyListingService {
-    private final PropertyRepository propertyRepository;
-    private final PropertyUtils propertyUtils;
+    private final ResidentialPropertyRepository residentialPropertyRepository;
+    private final CommercialPropertyRepository commercialPropertyRepository;
+    private final LandPropertyRepository landPropertyRepository;
+    private final PropertyQueryRepository propertyQueryRepository;
     private final S3Service s3Service;
 
     
 
     public List<PropertyDto> getPropertyList(PrimaryFilterRequest primaryFilterRequest, SecondaryFilterRequest secondaryFilterRequest, Integer limit, Integer offset){
-        List<Property> propertyList =  propertyRepository.getPropertiesByFilters(primaryFilterRequest,secondaryFilterRequest,limit,offset);
-        return propertyUtils.mapPropertyListToPropertyDtoList(propertyList);
-    }
-
-    public PropertyDto saveProperty(Property property) {
-        property.setPostedOn(new Date());
-        Property savedProperty = propertyRepository.save(property);
-        PropertyDto propertyDto;
-        switch (property.getPropertyType()) {
-            case RESIDENTIAL -> propertyDto = new ResidentialPropertyDto((ResidentialProperty) savedProperty);
-            case COMMERCIAL -> propertyDto = new CommercialPropertyDto((CommercialProperty) savedProperty);
-            case LAND -> propertyDto = new LandPropertyDto((LandProperty) savedProperty);
-            default -> throw new IllegalArgumentException("Unsupported property type: " + property.getPropertyType());
+        if (primaryFilterRequest.getPropertyType() == null) {
+            throw new PropertyTypeRequiredException(ResponseMessage.PROPERTY_TYPE_REQUIRED);
         }
-        return propertyDto;
+        
+        return getPropertiesByType(primaryFilterRequest, secondaryFilterRequest, limit, offset);
     }
+    
+    private List<PropertyDto> getPropertiesByType(PrimaryFilterRequest primaryFilterRequest, SecondaryFilterRequest secondaryFilterRequest, Integer limit, Integer offset) {
+        switch (primaryFilterRequest.getPropertyType()) {
+            case RESIDENTIAL -> {
+                List<ResidentialProperty> properties = propertyQueryRepository.findResidentialPropertiesByFilters(
+                    primaryFilterRequest, secondaryFilterRequest, limit, offset);
+                return properties.stream()
+                        .map(ResidentialPropertyDto::new)
+                        .map(dto -> (PropertyDto) dto)
+                        .toList();
+            }
+            case COMMERCIAL -> {
+                List<CommercialProperty> properties = propertyQueryRepository.findCommercialPropertiesByFilters(
+                    primaryFilterRequest, secondaryFilterRequest, limit, offset);
+                return properties.stream()
+                        .map(CommercialPropertyDto::new)
+                        .map(dto -> (PropertyDto) dto)
+                        .toList();
+            }
+            case LAND -> {
+                List<LandProperty> properties = propertyQueryRepository.findLandPropertiesByFilters(
+                    primaryFilterRequest, secondaryFilterRequest, limit, offset);
+                return properties.stream()
+                        .map(LandPropertyDto::new)
+                        .map(dto -> (PropertyDto) dto)
+                        .toList();
+            }
+            default -> throw new IllegalArgumentException("Invalid property type: " + primaryFilterRequest.getPropertyType());
 
-    public PresignedUrlBatchResponse generatePostPresignedUrls(String propertyId, PresignedUrlRequest request) {
-        Property property = propertyRepository.findById(propertyId)
-                .orElseThrow(() -> new PropertyNotFound("Property not found: " + propertyId));
+        }
+    }
+    
+    
+    
+
+
+    public PresignedUrlBatchResponse generatePostPresignedUrls(String propertyId, String propertyType, PresignedUrlRequest request) {
+        Property property = propertyQueryRepository.findPropertyByIdAndType(propertyId, propertyType);
+        if (property == null) {
+            throw new PropertyNotFoundException("Property not found with id: " + propertyId + " and type: " + propertyType);
+        }
 
         int currentImages = property.getNoOfImages();
         int currentVideos = property.getNoOfVideos();
@@ -118,9 +150,11 @@ public class PropertyListingService {
         };
     }
 
-    public void updatePropertyMedia(String propertyId, List<String> mediaKeys) {
-        Property property = propertyRepository.findById(propertyId)
-                .orElseThrow(() -> new PropertyNotFound("Property not found: " + propertyId));
+    public void updatePropertyMedia(String propertyId, String propertyType, List<String> mediaKeys) {
+        Property property = propertyQueryRepository.findPropertyByIdAndType(propertyId, propertyType);
+        if (property == null) {
+            throw new PropertyNotFoundException("Property not found with id: " + propertyId + " and type: " + propertyType);
+        }
 
         if (mediaKeys != null && !mediaKeys.isEmpty()) {
             if (property.getMediaKeys() == null) {
@@ -143,6 +177,17 @@ public class PropertyListingService {
             property.setNoOfImages(property.getNoOfImages() + newImages);
             property.setNoOfVideos(property.getNoOfVideos() + newVideos);
         }
-        propertyRepository.save(property);
+        
+        // Save to the appropriate repository based on property type
+        savePropertyToCorrectRepository(property, propertyType);
+    }
+    
+    private void savePropertyToCorrectRepository(Property property, String propertyType) {
+        switch (propertyType.toUpperCase()) {
+            case "RESIDENTIAL" -> residentialPropertyRepository.save((ResidentialProperty) property);
+            case "COMMERCIAL" -> commercialPropertyRepository.save((CommercialProperty) property);
+            case "LAND" -> landPropertyRepository.save((LandProperty) property);
+            default -> throw new IllegalArgumentException("Invalid property type: " + propertyType);
+        }
     }
 }

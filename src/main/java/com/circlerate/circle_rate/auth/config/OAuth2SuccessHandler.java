@@ -98,11 +98,11 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         }
 
 
-        AccessToken accessToken = jwtService.generateAccessToken(user.getEmail(), user.getRole());
+        AccessToken accessToken = jwtService.generateAccessToken(user.getId(), user.getRole());
         authResponse.setAccessToken(accessToken.getToken());
         authResponse.setUserId(user.getId());
 
-        RefreshToken refreshToken = jwtService.generateRefreshToken(user.getEmail());
+        RefreshToken refreshToken = jwtService.generateRefreshToken(user.getId());
         ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken.getToken())
                 .httpOnly(true)
                 .secure(!isLocal) // Set to false in local dev if not using HTTPS

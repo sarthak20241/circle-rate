@@ -1,55 +1,98 @@
 package com.circlerate.circle_rate.listing.repository;
 
+import com.circlerate.circle_rate.listing.model.property.CommercialProperty;
+import com.circlerate.circle_rate.listing.model.property.LandProperty;
 import com.circlerate.circle_rate.listing.model.property.Property;
+import com.circlerate.circle_rate.listing.model.property.ResidentialProperty;
 import com.circlerate.circle_rate.listing.payload.PrimaryFilterRequest;
 import com.circlerate.circle_rate.listing.payload.SecondaryFilterRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.stereotype.Component;
-import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-@Component
-@RequiredArgsConstructor
-public class PropertyRepositoryImpl implements PropertyRepositoryCustom {
+@Repository
+public class PropertyQueryRepository {
     private final MongoTemplate mongoTemplate;
 
-    @Override
-    public List<Property> getPropertiesByFilters(PrimaryFilterRequest primaryFilters, SecondaryFilterRequest secondaryFilters, int limit, int offset){
+    public PropertyQueryRepository(MongoTemplate mongoTemplate) {
+        this.mongoTemplate = mongoTemplate;
+    }
+
+    public List<ResidentialProperty> findResidentialPropertiesByFilters(
+            PrimaryFilterRequest primaryFilter, 
+            SecondaryFilterRequest secondaryFilter, 
+            int limit, 
+            int offset) {
+        
         Query query = new Query();
-        addPrimaryFiltersToQuery(primaryFilters, query);
-        addSecondaryFiltersToQuery(secondaryFilters, query);
+        addPrimaryFiltersToQuery(primaryFilter, query);
+        addSecondaryFiltersToQuery(secondaryFilter, query);
+        addResidentialSpecificFilters(primaryFilter, secondaryFilter, query);
+        
         query.with(Sort.by(Sort.Direction.DESC, "propertyScore"));
         query.limit(limit);
         query.skip(offset);
-        return mongoTemplate.find(query, Property.class);
+        
+        return mongoTemplate.find(query, ResidentialProperty.class);
     }
-
-    private void addPrimaryFiltersToQuery(PrimaryFilterRequest primaryFilterRequest, Query query){
-        if(primaryFilterRequest.getListingType()!=null){
+    
+    public List<CommercialProperty> findCommercialPropertiesByFilters(
+            PrimaryFilterRequest primaryFilter, 
+            SecondaryFilterRequest secondaryFilter, 
+            int limit, 
+            int offset) {
+        
+        Query query = new Query();
+        addPrimaryFiltersToQuery(primaryFilter, query);
+        addSecondaryFiltersToQuery(secondaryFilter, query);
+        addCommercialSpecificFilters(primaryFilter, secondaryFilter, query);
+        
+        query.with(Sort.by(Sort.Direction.DESC, "propertyScore"));
+        query.limit(limit);
+        query.skip(offset);
+        
+        return mongoTemplate.find(query, CommercialProperty.class);
+    }
+    
+    public List<LandProperty> findLandPropertiesByFilters(
+            PrimaryFilterRequest primaryFilter, 
+            SecondaryFilterRequest secondaryFilter, 
+            int limit, 
+            int offset) {
+        
+        Query query = new Query();
+        addPrimaryFiltersToQuery(primaryFilter, query);
+        addSecondaryFiltersToQuery(secondaryFilter, query);
+        addLandSpecificFilters(primaryFilter, secondaryFilter, query);
+        
+        query.with(Sort.by(Sort.Direction.DESC, "propertyScore"));
+        query.limit(limit);
+        query.skip(offset);
+        
+        return mongoTemplate.find(query, LandProperty.class);
+    }
+    
+    private void addPrimaryFiltersToQuery(PrimaryFilterRequest primaryFilterRequest, Query query) {
+        if (primaryFilterRequest.getListingType() != null) {
             query.addCriteria(Criteria.where("listingType").is(primaryFilterRequest.getListingType()));
         }
 
-        if(primaryFilterRequest.getPropertyType() != null){
-            query.addCriteria(Criteria.where("propertyType").is(primaryFilterRequest.getPropertyType()));
-        }
-
+        // Location filters (hierarchical)
         if (primaryFilterRequest.getSubLocalityName() != null) {
             query.addCriteria(Criteria.where("subLocalityName").is(primaryFilterRequest.getSubLocalityName()));
-        }
-        else if(primaryFilterRequest.getLocalityName()!=null){
+        } else if (primaryFilterRequest.getLocalityName() != null) {
             query.addCriteria(Criteria.where("localityName").is(primaryFilterRequest.getLocalityName()));
-        }
-        else if(primaryFilterRequest.getCityName()!=null){
+        } else if (primaryFilterRequest.getCityName() != null) {
             query.addCriteria(Criteria.where("cityName").is(primaryFilterRequest.getCityName()));
-        }
-        else if(primaryFilterRequest.getStateName()!=null){
+        } else if (primaryFilterRequest.getStateName() != null) {
             query.addCriteria(Criteria.where("stateName").is(primaryFilterRequest.getStateName()));
         }
 
+        // Price range filters
         if (primaryFilterRequest.getMinPrice() != null && primaryFilterRequest.getMaxPrice() != null) {
             query.addCriteria(Criteria.where("expectedPriceInRupees").gte(primaryFilterRequest.getMinPrice()).lte(primaryFilterRequest.getMaxPrice()));
         } else if (primaryFilterRequest.getMinPrice() != null) {
@@ -58,6 +101,7 @@ public class PropertyRepositoryImpl implements PropertyRepositoryCustom {
             query.addCriteria(Criteria.where("expectedPriceInRupees").lte(primaryFilterRequest.getMaxPrice()));
         }
 
+        // Area range filters
         if (primaryFilterRequest.getMinSqFtArea() != null && primaryFilterRequest.getMaxSqFtArea() != null) {
             query.addCriteria(Criteria.where("areaInSqFt").gte(primaryFilterRequest.getMinSqFtArea()).lte(primaryFilterRequest.getMaxSqFtArea()));
         } else if (primaryFilterRequest.getMinSqFtArea() != null) {
@@ -65,29 +109,28 @@ public class PropertyRepositoryImpl implements PropertyRepositoryCustom {
         } else if (primaryFilterRequest.getMaxSqFtArea() != null) {
             query.addCriteria(Criteria.where("areaInSqFt").lte(primaryFilterRequest.getMaxSqFtArea()));
         }
-
-
-        if(primaryFilterRequest.getNoOfRooms()!=null){
-            query.addCriteria(Criteria.where("noOfRooms").in(primaryFilterRequest.getNoOfRooms()));
-        }
     }
-
-    private void addSecondaryFiltersToQuery(SecondaryFilterRequest secondaryFilterRequest, Query query){
-        //owner type
+    
+    private void addSecondaryFiltersToQuery(SecondaryFilterRequest secondaryFilterRequest, Query query) {
+        // Owner type filter
         if (secondaryFilterRequest.getOwnerType() != null) {
             query.addCriteria(Criteria.where("ownerType").is(secondaryFilterRequest.getOwnerType()));
         }
-        // No. of washrooms
+    }
+    
+    private void addResidentialSpecificFilters(PrimaryFilterRequest primaryFilterRequest, SecondaryFilterRequest secondaryFilterRequest, Query query) {
+        if (primaryFilterRequest.getNoOfRooms() != null && !primaryFilterRequest.getNoOfRooms().isEmpty()) {
+            query.addCriteria(Criteria.where("noOfRooms").in(primaryFilterRequest.getNoOfRooms()));
+        }
+
         if (secondaryFilterRequest.getNoOfWashrooms() != null) {
             query.addCriteria(Criteria.where("noOfWashrooms").is(secondaryFilterRequest.getNoOfWashrooms()));
         }
 
-        // No. of balconies
         if (secondaryFilterRequest.getNoOfBalconies() != null) {
             query.addCriteria(Criteria.where("noOfBalconies").is(secondaryFilterRequest.getNoOfBalconies()));
         }
 
-        // Property floor range
         if (secondaryFilterRequest.getMinPropertyFloor() != null && secondaryFilterRequest.getMaxPropertyFloor() != null) {
             query.addCriteria(Criteria.where("propertyFloor")
                     .gte(secondaryFilterRequest.getMinPropertyFloor())
@@ -98,7 +141,6 @@ public class PropertyRepositoryImpl implements PropertyRepositoryCustom {
             query.addCriteria(Criteria.where("propertyFloor").lte(secondaryFilterRequest.getMaxPropertyFloor()));
         }
 
-        // Total floors range
         if (secondaryFilterRequest.getMinTotalFloors() != null && secondaryFilterRequest.getMaxTotalFloors() != null) {
             query.addCriteria(Criteria.where("totalFloors")
                     .gte(secondaryFilterRequest.getMinTotalFloors())
@@ -109,7 +151,6 @@ public class PropertyRepositoryImpl implements PropertyRepositoryCustom {
             query.addCriteria(Criteria.where("totalFloors").lte(secondaryFilterRequest.getMaxTotalFloors()));
         }
 
-        // Age of property range
         if (secondaryFilterRequest.getMinAgeOfProperty() != null && secondaryFilterRequest.getMaxAgeOfProperty() != null) {
             query.addCriteria(Criteria.where("ageOfProperty")
                     .gte(secondaryFilterRequest.getMinAgeOfProperty())
@@ -120,5 +161,44 @@ public class PropertyRepositoryImpl implements PropertyRepositoryCustom {
             query.addCriteria(Criteria.where("ageOfProperty").lte(secondaryFilterRequest.getMaxAgeOfProperty()));
         }
     }
-
+    
+    private void addCommercialSpecificFilters(PrimaryFilterRequest primaryFilterRequest, SecondaryFilterRequest secondaryFilterRequest, Query query) {
+    }
+    
+    private void addLandSpecificFilters(PrimaryFilterRequest primaryFilterRequest, SecondaryFilterRequest secondaryFilterRequest, Query query) {
+    }
+    
+    public boolean propertyExistsByIdAndType(String propertyId, String propertyType) {
+        switch (propertyType.toUpperCase()) {
+            case "RESIDENTIAL" -> {
+                return mongoTemplate.exists(Query.query(Criteria.where("id").is(propertyId)), ResidentialProperty.class);
+            }
+            case "COMMERCIAL" -> {
+                return mongoTemplate.exists(Query.query(Criteria.where("id").is(propertyId)), CommercialProperty.class);
+            }
+            case "LAND" -> {
+                return mongoTemplate.exists(Query.query(Criteria.where("id").is(propertyId)), LandProperty.class);
+            }
+            default -> {
+                return false;
+            }
+        }
+    }
+    
+    public Property findPropertyByIdAndType(String propertyId, String propertyType) {
+        switch (propertyType.toUpperCase()) {
+            case "RESIDENTIAL" -> {
+                return mongoTemplate.findById(propertyId, ResidentialProperty.class);
+            }
+            case "COMMERCIAL" -> {
+                return mongoTemplate.findById(propertyId, CommercialProperty.class);
+            }
+            case "LAND" -> {
+                return mongoTemplate.findById(propertyId, LandProperty.class);
+            }
+            default -> {
+                return null;
+            }
+        }
+    }
 }

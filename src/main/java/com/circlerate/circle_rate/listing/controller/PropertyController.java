@@ -1,33 +1,26 @@
 package com.circlerate.circle_rate.listing.controller;
 
-import com.circlerate.circle_rate.listing.model.property.Property;
-import com.circlerate.circle_rate.listing.model.property.dto.PropertyDto;
+import com.circlerate.circle_rate.listing.model.property.dto.*;
 import com.circlerate.circle_rate.listing.payload.*;
-import com.circlerate.circle_rate.listing.service.PropertyListingService;
+import com.circlerate.circle_rate.listing.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
 
+//TODO: When Locality service implemented, update the post property apis
 @RestController
 @RequestMapping("/property")
 @RequiredArgsConstructor
 public class PropertyController {
     private final PropertyListingService propertyListingService;
-
-    
-
-    //todo refer property id in user
-    //todo refer property id in locality
-    //accept property request
-    @PostMapping("/post")
-    public ResponseEntity<PropertyDto> postProperty(@RequestBody PropertyRequest propertyRequest){
-        Property property = propertyRequest.toEntity();
-        PropertyDto saved = propertyListingService.saveProperty(property);
-        return ResponseEntity.ok(saved);
-    }
+    private final ResidentialPropertyService residentialPropertyService;
+    private final CommercialPropertyService commercialPropertyService;
+    private final LandPropertyService landPropertyService;
 
     @GetMapping("/listing/{propertyCount}")
     public ResponseEntity<List<PropertyDto>> getPropertiesByFilter(@ModelAttribute PrimaryFilterRequest primaryFilterRequest, @ModelAttribute SecondaryFilterRequest secondaryFilterRequest, @RequestParam(defaultValue = "500") Integer limit, @RequestParam Integer offset){
@@ -35,21 +28,119 @@ public class PropertyController {
     }
 
     @PostMapping("/{propertyId}/presigned-urls")
-    public ResponseEntity<PresignedUrlBatchResponse> generatePostPresignedUrls(
+    public ResponseEntity<PresignedUrlBatchResponse> generatePutPresignedUrls(
             @PathVariable String propertyId,
+            @RequestParam String propertyType,
             @RequestBody PresignedUrlRequest request) {
-        return ResponseEntity.ok(propertyListingService.generatePostPresignedUrls(propertyId, request));
+        return ResponseEntity.ok(propertyListingService.generatePostPresignedUrls(propertyId, propertyType, request));
     }
 
     @PostMapping("/{propertyId}/media")
     public ResponseEntity<Map<String, String>> updateMedia(
             @PathVariable String propertyId,
+            @RequestParam String propertyType,
             @RequestBody List<String> mediaKeys) {
-        propertyListingService.updatePropertyMedia(propertyId, mediaKeys);
+        propertyListingService.updatePropertyMedia(propertyId, propertyType, mediaKeys);
         return ResponseEntity.ok(Map.of("message", "Property media updated successfully"));
     }
 
 
+    @PostMapping("/residential")
+    public ResponseEntity<ResidentialPropertyDto> createResidentialProperty(
+            @RequestBody @Valid ResidentialPropertyRequest request,
+            Authentication authentication) {
+        String userId = authentication.getName();
+        return residentialPropertyService.createProperty(request, userId);
+    }
+
+    @GetMapping("/residential/my-properties")
+    public ResponseEntity<List<ResidentialPropertyDto>> getMyResidentialProperties(
+            Authentication authentication) {
+        String userId = authentication.getName();
+        return residentialPropertyService.getUserProperties(userId);
+    }
+
+    @PutMapping("/residential/{propertyId}")
+    public ResponseEntity<ResidentialPropertyDto> updateResidentialProperty(
+            @PathVariable String propertyId,
+            @RequestBody @Valid ResidentialPropertyRequest request,
+            Authentication authentication) {
+        String userId = authentication.getName();
+        return residentialPropertyService.updateProperty(userId, propertyId, request);
+    }
+
+    @DeleteMapping("/residential/{propertyId}")
+    public ResponseEntity<String> deleteResidentialProperty(
+            @PathVariable String propertyId,
+            Authentication authentication) {
+        String userId = authentication.getName();
+        return residentialPropertyService.deleteProperty(userId, propertyId);
+    }
+
+    @PostMapping("/commercial")
+    public ResponseEntity<CommercialPropertyDto> createCommercialProperty(
+            @RequestBody @Valid CommercialPropertyRequest request,
+            Authentication authentication) {
+        String userId = authentication.getName();
+        return commercialPropertyService.createProperty(request, userId);
+    }
+
+    @GetMapping("/commercial/my-properties")
+    public ResponseEntity<List<CommercialPropertyDto>> getMyCommercialProperties(
+            Authentication authentication) {
+        String userId = authentication.getName();
+        return commercialPropertyService.getUserProperties(userId);
+    }
+
+    @PutMapping("/commercial/{propertyId}")
+    public ResponseEntity<CommercialPropertyDto> updateCommercialProperty(
+            @PathVariable String propertyId,
+            @RequestBody @Valid CommercialPropertyRequest request,
+            Authentication authentication) {
+        String userId = authentication.getName();
+        return commercialPropertyService.updateProperty(userId, propertyId, request);
+    }
+
+    @DeleteMapping("/commercial/{propertyId}")
+    public ResponseEntity<String> deleteCommercialProperty(
+            @PathVariable String propertyId,
+            Authentication authentication) {
+        String userId = authentication.getName();
+        return commercialPropertyService.deleteProperty(userId, propertyId);
+    }
+
+    // Land Property Endpoints
+    @PostMapping("/land")
+    public ResponseEntity<LandPropertyDto> createLandProperty(
+            @RequestBody @Valid LandPropertyRequest request,
+            Authentication authentication) {
+        String userId = authentication.getName();
+        return landPropertyService.createProperty(request, userId);
+    }
+
+    @GetMapping("/land/my-properties")
+    public ResponseEntity<List<LandPropertyDto>> getMyLandProperties(
+            Authentication authentication) {
+        String userId = authentication.getName();
+        return landPropertyService.getUserProperties(userId);
+    }
+
+    @PutMapping("/land/{propertyId}")
+    public ResponseEntity<LandPropertyDto> updateLandProperty(
+            @PathVariable String propertyId,
+            @RequestBody @Valid LandPropertyRequest request,
+            Authentication authentication) {
+        String userId = authentication.getName();
+        return landPropertyService.updateProperty(userId, propertyId, request);
+    }
+
+    @DeleteMapping("/land/{propertyId}")
+    public ResponseEntity<String> deleteLandProperty(
+            @PathVariable String propertyId,
+            Authentication authentication) {
+        String userId = authentication.getName();
+        return landPropertyService.deleteProperty(userId, propertyId);
+    }
 
 }
 

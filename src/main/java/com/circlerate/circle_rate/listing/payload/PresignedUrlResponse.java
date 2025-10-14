@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class PresignedUrlResponse {
-    private String url;   // Pre-signed PUT URL
+    private String url;
     private String s3Key;
 }

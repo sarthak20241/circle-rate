@@ -8,7 +8,15 @@ public final class ResponseMessage {
     public static final String USER_NOT_FOUND = "User Not Found";
     public static final String USER_ROLE_NOT_ALLOWED = "User is not approved for the requested Role";
     public static final String USER_SIGNEDUP_WITH_DIFFERENT_LOGIN_TYPE = "User Already signed up with a different login type: ";
+    public static final String USER_NOT_AUTHORIZED = "User Not Authorized";
     public static final String ACCESS_TOKEN_REFRESHED = "Access token refreshed";
     public static final String INVALID_TOKEN = "Invalid token";
     public static final String MISSING_TOKEN_EXCEPTION = "Missing refresh token";
+    public static final String PROPERTY_NOT_FOUND = "Property Not Found";
+    public static final String PROPERTY_DELETED = "Property Successfully Deleted";
+    public static final String INTEREST_ALREADY_EXISTS = "User Interest Already Exists for this Property";
+    public static final String INTEREST_ADDED = "Interest Added Successfully";
+    public static final String INTEREST_REMOVED = "Interest Removed Successfully";
+    public static final String INTEREST_NOT_FOUND = "Interest Not Found";
+    public static final String PROPERTY_TYPE_REQUIRED = "Property type is required for this operation";
 }
