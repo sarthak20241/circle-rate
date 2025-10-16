@@ -329,7 +329,7 @@ public class UserService {
             }
 
             String s3Key = generateProfilePictureS3Key(userId, request.getMimeType());
-            String presignedUrl = s3Service.generatePresignedUrl(s3Key, request.getMimeType());
+            String presignedUrl = s3Service.generatePutPresignedUrl(s3Key, request.getMimeType());
             
             return ResponseEntity.ok(new PresignedUrlResponse(presignedUrl, s3Key));
         } catch (Exception ex) {
@@ -406,6 +406,19 @@ public class UserService {
             case "image/webp" -> ".webp";
             default -> ".jpg";
         };
+    }
+
+
+    public ResponseEntity<PresignedUrlResponse> getProfilePicture(String userId) {
+        Optional<User> user = userRepository.findById(userId);
+        if(user.isEmpty()){
+            throw new UserNotFoundException(ResponseMessage.USER_NOT_FOUND);
+        }
+        String profilePictureKey = user.get().getProfilePictureKey();
+        if(profilePictureKey == null || profilePictureKey.isEmpty()){
+            return ResponseEntity.ok(new PresignedUrlResponse(null, null));
+        }
+        return ResponseEntity.ok(new PresignedUrlResponse(s3Service.generateGetPresignedUrl(profilePictureKey), profilePictureKey));
     }
 
 }

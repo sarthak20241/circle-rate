@@ -79,4 +79,10 @@ public class UserController {
         String userId = authentication.getName();
         return userService.deleteProfilePicture(userId);
     }
+
+    @GetMapping("/profile/picture")
+    public ResponseEntity<PresignedUrlResponse> getProfilePicture(Authentication authentication) {
+        String userId = authentication.getName();
+        return userService.getProfilePicture(userId);
+    }
 }

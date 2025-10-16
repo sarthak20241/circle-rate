@@ -20,12 +20,16 @@ import com.circlerate.circle_rate.listing.repository.CommercialPropertyRepositor
 import com.circlerate.circle_rate.listing.repository.LandPropertyRepository;
 import com.circlerate.circle_rate.listing.repository.PropertyQueryRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PropertyListingService {
@@ -80,7 +84,7 @@ public class PropertyListingService {
     
 
 
-    public PresignedUrlBatchResponse generatePostPresignedUrls(String propertyId, String propertyType, PresignedUrlRequest request) {
+    public PresignedUrlBatchResponse generatePropertyImagesPutPresignedUrls(String propertyId, String propertyType, PresignedUrlRequest request) {
         Property property = propertyQueryRepository.findPropertyByIdAndType(propertyId, propertyType);
         if (property == null) {
             throw new PropertyNotFoundException("Property not found with id: " + propertyId + " and type: " + propertyType);
@@ -103,7 +107,7 @@ public class PropertyListingService {
                     continue;
                 }
                 String key = generateS3Key(propertyId, category, extension);
-                String url = s3Service.generatePresignedUrl(key, file.getMimeType());
+                String url = s3Service.generatePutPresignedUrl(key, file.getMimeType());
                 presignedUrls.add(new PresignedUrlResponse(url, key));
                 currentImages++;
             } else if (category == FileCategory.VIDEO) {
@@ -112,7 +116,7 @@ public class PropertyListingService {
                     continue;
                 }
                 String key = generateS3Key(propertyId, category, extension);
-                String url = s3Service.generatePresignedUrl(key, file.getMimeType());
+                String url = s3Service.generatePutPresignedUrl(key, file.getMimeType());
                 presignedUrls.add(new PresignedUrlResponse(url, key));
                 currentVideos++;
             }
@@ -157,16 +161,19 @@ public class PropertyListingService {
         }
 
         if (mediaKeys != null && !mediaKeys.isEmpty()) {
-            if (property.getMediaKeys() == null) {
-                property.setMediaKeys(new ArrayList<>());
+            List<String> propertyMediaKeys = property.getMediaKeys();
+            if(propertyMediaKeys == null) {
+                propertyMediaKeys = new ArrayList<>();
             }
-
-            property.getMediaKeys().addAll(mediaKeys);
-
             int newImages = 0;
             int newVideos = 0;
 
             for (String key : mediaKeys) {
+                if(propertyMediaKeys.contains(key)) {
+                    log.info("property media with s3 key {} already added", key);
+                    continue;
+                }
+                propertyMediaKeys.add(key);
                 if (key.startsWith("property/images/")) {
                     newImages++;
                 } else if (key.startsWith("property/videos/")) {
@@ -176,9 +183,9 @@ public class PropertyListingService {
 
             property.setNoOfImages(property.getNoOfImages() + newImages);
             property.setNoOfVideos(property.getNoOfVideos() + newVideos);
+            property.setMediaKeys(propertyMediaKeys);
         }
-        
-        // Save to the appropriate repository based on property type
+
         savePropertyToCorrectRepository(property, propertyType);
     }
     
@@ -189,5 +196,52 @@ public class PropertyListingService {
             case "LAND" -> landPropertyRepository.save((LandProperty) property);
             default -> throw new IllegalArgumentException("Invalid property type: " + propertyType);
         }
+    }
+
+    public ResponseEntity<List<PresignedUrlResponse>> getPropertyImagesURL(String propertyId, String propertyType) {
+        Property property = propertyQueryRepository.findPropertyByIdAndType(propertyId, propertyType);
+        if (property == null) {
+            throw new PropertyNotFoundException("Property not found with id: " + propertyId + " and type: " + propertyType);
+        }
+        List<String> mediaKeys = property.getMediaKeys();
+        if (mediaKeys == null || mediaKeys.isEmpty()) {
+            return ResponseEntity.ok(new ArrayList<>());
+        }
+        List<PresignedUrlResponse> presignedUrls = new ArrayList<>();
+        for (String key : mediaKeys) {
+            presignedUrls.add(new PresignedUrlResponse(s3Service.generateGetPresignedUrl(key), key));
+        }
+        return ResponseEntity.ok(presignedUrls);
+    }
+
+    public ResponseEntity<String> deletePropertyImage(String propertyId, String propertyType, String s3Key, String userId) {
+        Property property = propertyQueryRepository.findPropertyByIdAndType(propertyId, propertyType);
+        if (property == null) {
+            throw new PropertyNotFoundException("Property not found with id: " + propertyId);
+        }
+        
+        if (!property.getOwnerId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ResponseMessage.NOT_AUTHORIZED_TO_DELETE_IMAGES);
+        }
+        if (property.getMediaKeys() == null || !property.getMediaKeys().contains(s3Key)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ResponseMessage.IMAGE_NOT_FOUND_IN_PROPERTY);
+        }
+        s3Service.deleteObject(s3Key);
+        property.getMediaKeys().remove(s3Key);
+        
+        if (s3Key.startsWith("property/images/")) {
+            property.setNoOfImages(property.getNoOfImages() - 1);
+        } else if (s3Key.startsWith("property/videos/")) {
+            property.setNoOfVideos(property.getNoOfVideos() - 1);
+        }
+        
+        if (property.getMediaKeys().isEmpty()) {
+            property.setMediaKeys(null);
+        }
+        
+        savePropertyToCorrectRepository(property, propertyType);
+        
+        log.info("Image deleted successfully: {} from property: {}", s3Key, propertyId);
+        return ResponseEntity.ok(ResponseMessage.IMAGE_DELETED_SUCCESSFULLY);
     }
 }

@@ -3,12 +3,12 @@ package com.circlerate.circle_rate.listing.controller;
 import com.circlerate.circle_rate.listing.model.property.dto.*;
 import com.circlerate.circle_rate.listing.payload.*;
 import com.circlerate.circle_rate.listing.service.*;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
 
@@ -22,7 +22,7 @@ public class PropertyController {
     private final CommercialPropertyService commercialPropertyService;
     private final LandPropertyService landPropertyService;
 
-    @GetMapping("/listing/{propertyCount}")
+    @GetMapping("/listing")
     public ResponseEntity<List<PropertyDto>> getPropertiesByFilter(@ModelAttribute PrimaryFilterRequest primaryFilterRequest, @ModelAttribute SecondaryFilterRequest secondaryFilterRequest, @RequestParam(defaultValue = "500") Integer limit, @RequestParam Integer offset){
         return ResponseEntity.ok(propertyListingService.getPropertyList(primaryFilterRequest,secondaryFilterRequest,limit,offset));
     }
@@ -32,7 +32,7 @@ public class PropertyController {
             @PathVariable String propertyId,
             @RequestParam String propertyType,
             @RequestBody PresignedUrlRequest request) {
-        return ResponseEntity.ok(propertyListingService.generatePostPresignedUrls(propertyId, propertyType, request));
+        return ResponseEntity.ok(propertyListingService.generatePropertyImagesPutPresignedUrls(propertyId, propertyType, request));
     }
 
     @PostMapping("/{propertyId}/media")
@@ -140,6 +140,23 @@ public class PropertyController {
             Authentication authentication) {
         String userId = authentication.getName();
         return landPropertyService.deleteProperty(userId, propertyId);
+    }
+
+    @GetMapping("/images/{propertyId}")
+    public ResponseEntity<List<PresignedUrlResponse>> getPropertyImages(
+            @PathVariable String propertyId,
+            @RequestParam String propertyType){
+        return propertyListingService.getPropertyImagesURL(propertyId,propertyType);
+    }
+
+    @DeleteMapping("/image/{propertyId}")
+    public ResponseEntity<String> deletePropertyImage(
+            @PathVariable String propertyId,
+            @RequestParam String propertyType,
+            @RequestBody @Valid DeleteImageRequest request,
+            Authentication authentication) {
+        String userId = authentication.getName();
+        return propertyListingService.deletePropertyImage(propertyId, propertyType, request.getS3Key(), userId);
     }
 
 }
