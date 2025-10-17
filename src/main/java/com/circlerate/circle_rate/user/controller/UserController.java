@@ -1,10 +1,10 @@
 package com.circlerate.circle_rate.user.controller;
 
-import com.circlerate.circle_rate.listing.model.property.dto.PropertyDto;
 import com.circlerate.circle_rate.listing.payload.PresignedUrlResponse;
 import com.circlerate.circle_rate.user.model.UserDao;
 import com.circlerate.circle_rate.user.payload.InterestRequest;
 import com.circlerate.circle_rate.user.payload.ProfilePictureUploadRequest;
+import com.circlerate.circle_rate.user.payload.UserInterestedPropertiesResponse;
 import com.circlerate.circle_rate.user.payload.UserProfileUpdateRequest;
 import com.circlerate.circle_rate.user.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +13,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
-import java.util.List;
 
 @RestController
 @RequestMapping("/user")
@@ -30,9 +29,12 @@ public class UserController {
     }
 
     @GetMapping("/interests")
-    public ResponseEntity<List<PropertyDto>> getUserInterestedProperties(Authentication authentication) {
+    public ResponseEntity<UserInterestedPropertiesResponse> getUserInterestedPropertiesPaginated(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int limit,
+            Authentication authentication) {
         String userId = authentication.getName();
-        return userService.getUserInterestedProperties(userId);
+        return userService.getUserInterestedProperties(userId, page, limit);
     }
 
     @DeleteMapping("/interests/{propertyId}")

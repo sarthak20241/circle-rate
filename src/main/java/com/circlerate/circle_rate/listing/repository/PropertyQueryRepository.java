@@ -6,7 +6,9 @@ import com.circlerate.circle_rate.listing.model.property.Property;
 import com.circlerate.circle_rate.listing.model.property.ResidentialProperty;
 import com.circlerate.circle_rate.listing.payload.PrimaryFilterRequest;
 import com.circlerate.circle_rate.listing.payload.SecondaryFilterRequest;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -22,58 +24,55 @@ public class PropertyQueryRepository {
         this.mongoTemplate = mongoTemplate;
     }
 
-    public List<ResidentialProperty> findResidentialPropertiesByFilters(
-            PrimaryFilterRequest primaryFilter, 
-            SecondaryFilterRequest secondaryFilter, 
-            int limit, 
-            int offset) {
+    public Page<ResidentialProperty> findResidentialPropertiesByFilters(
+            PrimaryFilterRequest primaryFilter,
+            SecondaryFilterRequest secondaryFilter,
+            Pageable pageable) {
         
         Query query = new Query();
         addPrimaryFiltersToQuery(primaryFilter, query);
         addSecondaryFiltersToQuery(secondaryFilter, query);
         addResidentialSpecificFilters(primaryFilter, secondaryFilter, query);
         
-        query.with(Sort.by(Sort.Direction.DESC, "propertyScore"));
-        query.limit(limit);
-        query.skip(offset);
+        long total = mongoTemplate.count(query, ResidentialProperty.class);
+        query.with(pageable);
         
-        return mongoTemplate.find(query, ResidentialProperty.class);
+        List<ResidentialProperty> properties = mongoTemplate.find(query, ResidentialProperty.class);
+        return new PageImpl<>(properties, pageable, total);
     }
     
-    public List<CommercialProperty> findCommercialPropertiesByFilters(
+    public Page<CommercialProperty> findCommercialPropertiesByFilters(
             PrimaryFilterRequest primaryFilter, 
             SecondaryFilterRequest secondaryFilter, 
-            int limit, 
-            int offset) {
+            Pageable pageable) {
         
         Query query = new Query();
         addPrimaryFiltersToQuery(primaryFilter, query);
         addSecondaryFiltersToQuery(secondaryFilter, query);
         addCommercialSpecificFilters(primaryFilter, secondaryFilter, query);
         
-        query.with(Sort.by(Sort.Direction.DESC, "propertyScore"));
-        query.limit(limit);
-        query.skip(offset);
+        long total = mongoTemplate.count(query, CommercialProperty.class);
+        query.with(pageable);
         
-        return mongoTemplate.find(query, CommercialProperty.class);
+        List<CommercialProperty> properties = mongoTemplate.find(query, CommercialProperty.class);
+        return new PageImpl<>(properties, pageable, total);
     }
     
-    public List<LandProperty> findLandPropertiesByFilters(
+    public Page<LandProperty> findLandPropertiesByFilters(
             PrimaryFilterRequest primaryFilter, 
             SecondaryFilterRequest secondaryFilter, 
-            int limit, 
-            int offset) {
+            Pageable pageable) {
         
         Query query = new Query();
         addPrimaryFiltersToQuery(primaryFilter, query);
         addSecondaryFiltersToQuery(secondaryFilter, query);
         addLandSpecificFilters(primaryFilter, secondaryFilter, query);
         
-        query.with(Sort.by(Sort.Direction.DESC, "propertyScore"));
-        query.limit(limit);
-        query.skip(offset);
+        long total = mongoTemplate.count(query, LandProperty.class);
+        query.with(pageable);
         
-        return mongoTemplate.find(query, LandProperty.class);
+        List<LandProperty> properties = mongoTemplate.find(query, LandProperty.class);
+        return new PageImpl<>(properties, pageable, total);
     }
     
     private void addPrimaryFiltersToQuery(PrimaryFilterRequest primaryFilterRequest, Query query) {

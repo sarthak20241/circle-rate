@@ -23,8 +23,12 @@ public class PropertyController {
     private final LandPropertyService landPropertyService;
 
     @GetMapping("/listing")
-    public ResponseEntity<List<PropertyDto>> getPropertiesByFilter(@ModelAttribute PrimaryFilterRequest primaryFilterRequest, @ModelAttribute SecondaryFilterRequest secondaryFilterRequest, @RequestParam(defaultValue = "500") Integer limit, @RequestParam Integer offset){
-        return ResponseEntity.ok(propertyListingService.getPropertyList(primaryFilterRequest,secondaryFilterRequest,limit,offset));
+    public ResponseEntity<PropertyListingResponse> getPropertiesByFilter(
+            @ModelAttribute PrimaryFilterRequest primaryFilterRequest, 
+            @ModelAttribute SecondaryFilterRequest secondaryFilterRequest, 
+            @RequestParam(defaultValue = "0") Integer page, 
+            @RequestParam(defaultValue = "500") Integer limit){
+        return ResponseEntity.ok(propertyListingService.getPropertyList(primaryFilterRequest, secondaryFilterRequest, page, limit));
     }
 
     @PostMapping("/{propertyId}/presigned-urls")
@@ -157,6 +161,17 @@ public class PropertyController {
             Authentication authentication) {
         String userId = authentication.getName();
         return propertyListingService.deletePropertyImage(propertyId, propertyType, request.getS3Key(), userId);
+    }
+
+    @GetMapping("/{propertyId}/interested-users")
+    public ResponseEntity<InterestedUsersResponse> getInterestedUsers(
+            @PathVariable String propertyId,
+            @RequestParam String propertyType,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int limit,
+            Authentication authentication) {
+        String userId = authentication.getName();
+        return propertyListingService.getInterestedUsers(propertyId, propertyType, userId, page, limit);
     }
 
 }

@@ -19,8 +19,14 @@ import com.circlerate.circle_rate.listing.repository.ResidentialPropertyReposito
 import com.circlerate.circle_rate.listing.repository.CommercialPropertyRepository;
 import com.circlerate.circle_rate.listing.repository.LandPropertyRepository;
 import com.circlerate.circle_rate.listing.repository.PropertyQueryRepository;
+import com.circlerate.circle_rate.user.model.Interest;
+import com.circlerate.circle_rate.user.repository.InterestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -38,45 +44,69 @@ public class PropertyListingService {
     private final LandPropertyRepository landPropertyRepository;
     private final PropertyQueryRepository propertyQueryRepository;
     private final S3Service s3Service;
+    private final InterestRepository interestRepository;
 
     
 
-    public List<PropertyDto> getPropertyList(PrimaryFilterRequest primaryFilterRequest, SecondaryFilterRequest secondaryFilterRequest, Integer limit, Integer offset){
+    public PropertyListingResponse getPropertyList(PrimaryFilterRequest primaryFilterRequest, SecondaryFilterRequest secondaryFilterRequest, Integer page, Integer limit){
         if (primaryFilterRequest.getPropertyType() == null) {
             throw new PropertyTypeRequiredException(ResponseMessage.PROPERTY_TYPE_REQUIRED);
         }
-        
-        return getPropertiesByType(primaryFilterRequest, secondaryFilterRequest, limit, offset);
+        Pageable pageable = PageRequest.of(page, limit, Sort.by("propertyScore").descending());
+        return getPropertiesByType(primaryFilterRequest, secondaryFilterRequest, pageable);
     }
     
-    private List<PropertyDto> getPropertiesByType(PrimaryFilterRequest primaryFilterRequest, SecondaryFilterRequest secondaryFilterRequest, Integer limit, Integer offset) {
+    private PropertyListingResponse getPropertiesByType(PrimaryFilterRequest primaryFilterRequest, SecondaryFilterRequest secondaryFilterRequest, Pageable pageable) {
         switch (primaryFilterRequest.getPropertyType()) {
             case RESIDENTIAL -> {
-                List<ResidentialProperty> properties = propertyQueryRepository.findResidentialPropertiesByFilters(
-                    primaryFilterRequest, secondaryFilterRequest, limit, offset);
-                return properties.stream()
+                Page<ResidentialProperty> propertiesPage = propertyQueryRepository.findResidentialPropertiesByFilters(
+                    primaryFilterRequest, secondaryFilterRequest, pageable);
+                List<PropertyDto> propertyDtoList = propertiesPage.getContent().stream()
                         .map(ResidentialPropertyDto::new)
                         .map(dto -> (PropertyDto) dto)
                         .toList();
+                return new PropertyListingResponse(
+                    propertyDtoList,
+                    propertiesPage.getTotalElements(),
+                    propertiesPage.getNumber(),
+                    propertiesPage.getTotalPages(),
+                    propertiesPage.hasNext(),
+                    propertiesPage.hasPrevious()
+                );
             }
             case COMMERCIAL -> {
-                List<CommercialProperty> properties = propertyQueryRepository.findCommercialPropertiesByFilters(
-                    primaryFilterRequest, secondaryFilterRequest, limit, offset);
-                return properties.stream()
+                Page<CommercialProperty> propertiesPage = propertyQueryRepository.findCommercialPropertiesByFilters(
+                    primaryFilterRequest, secondaryFilterRequest, pageable);
+                List<PropertyDto> propertyDtoList = propertiesPage.getContent().stream()
                         .map(CommercialPropertyDto::new)
                         .map(dto -> (PropertyDto) dto)
                         .toList();
+                return new PropertyListingResponse(
+                    propertyDtoList,
+                    propertiesPage.getTotalElements(),
+                    propertiesPage.getNumber(),
+                    propertiesPage.getTotalPages(),
+                    propertiesPage.hasNext(),
+                    propertiesPage.hasPrevious()
+                );
             }
             case LAND -> {
-                List<LandProperty> properties = propertyQueryRepository.findLandPropertiesByFilters(
-                    primaryFilterRequest, secondaryFilterRequest, limit, offset);
-                return properties.stream()
+                Page<LandProperty> propertiesPage = propertyQueryRepository.findLandPropertiesByFilters(
+                    primaryFilterRequest, secondaryFilterRequest, pageable);
+                List<PropertyDto> propertyDtoList = propertiesPage.getContent().stream()
                         .map(LandPropertyDto::new)
                         .map(dto -> (PropertyDto) dto)
                         .toList();
+                return new PropertyListingResponse(
+                    propertyDtoList,
+                    propertiesPage.getTotalElements(),
+                    propertiesPage.getNumber(),
+                    propertiesPage.getTotalPages(),
+                    propertiesPage.hasNext(),
+                    propertiesPage.hasPrevious()
+                );
             }
             default -> throw new IllegalArgumentException("Invalid property type: " + primaryFilterRequest.getPropertyType());
-
         }
     }
     
@@ -243,5 +273,38 @@ public class PropertyListingService {
         
         log.info("Image deleted successfully: {} from property: {}", s3Key, propertyId);
         return ResponseEntity.ok(ResponseMessage.IMAGE_DELETED_SUCCESSFULLY);
+    }
+
+    public ResponseEntity<InterestedUsersResponse> getInterestedUsers(
+            String propertyId, 
+            String propertyType, 
+            String userId, 
+            int page, 
+            int size) {
+
+        Property property = propertyQueryRepository.findPropertyByIdAndType(propertyId, propertyType);
+        if (property == null) {
+            throw new PropertyNotFoundException(ResponseMessage.PROPERTY_NOT_FOUND);
+        }
+        
+        if (!property.getOwnerId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+        Page<Interest> interestsPage = interestRepository.findByPropertyId(propertyId, pageable);
+
+        InterestedUsersResponse response = new InterestedUsersResponse(
+            interestsPage.getContent(),
+            interestsPage.getTotalElements(),
+            interestsPage.getNumber(),
+            interestsPage.getTotalPages(),
+            interestsPage.hasNext(),
+            interestsPage.hasPrevious()
+        );
+        
+        log.info("Retrieved {} interested users for property: {}", interestsPage.getNumberOfElements(), propertyId);
+        return ResponseEntity.ok(response);
     }
 }

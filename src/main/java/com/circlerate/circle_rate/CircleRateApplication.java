@@ -7,7 +7,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class CircleRateApplication {
 
 	public static void main(String[] args) {
-		System.out.println("hi");
 		SpringApplication.run(CircleRateApplication.class, args);
 	}
 

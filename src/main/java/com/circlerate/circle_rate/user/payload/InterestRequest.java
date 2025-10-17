@@ -16,9 +16,13 @@ public class InterestRequest {
     @NotNull(message = "Property type is required")
     private PropertyType propertyType;
 
+    @NotNull(message = "First Name is required")
     private String firstName;
+    @NotNull(message = "Last Name is required")
     private String lastName;
+    @NotNull(message = "Email is required")
     private String email;
+    @NotNull(message = "Contact No is required")
     private String contactNo;
 
     private String notes; // Optional notes about the interest

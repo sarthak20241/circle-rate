@@ -14,6 +14,7 @@ import com.circlerate.circle_rate.user.model.User;
 import com.circlerate.circle_rate.user.model.UserDao;
 import com.circlerate.circle_rate.user.payload.InterestRequest;
 import com.circlerate.circle_rate.user.payload.ProfilePictureUploadRequest;
+import com.circlerate.circle_rate.user.payload.UserInterestedPropertiesResponse;
 import com.circlerate.circle_rate.user.payload.UserProfileUpdateRequest;
 import com.circlerate.circle_rate.listing.model.property.Property;
 import com.circlerate.circle_rate.listing.model.property.dto.PropertyDto;
@@ -32,6 +33,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 
 import com.circlerate.circle_rate.common.exception.custom_exception.InterestAlreadyExistsException;
@@ -175,18 +180,13 @@ public class UserService {
             
             AccessToken newAccessToken = jwtService.generateAccessToken(user.getId(), user.getRole());
             AuthResponse authResponse = new AuthResponse(user.getId(), user.getEmail(), ResponseMessage.ACCESS_TOKEN_REFRESHED, newAccessToken.getToken());
-            
-            // If token is older than 5 days, generate new refresh token and delete old one
+
             if (shouldRotateToken) {
-                // Delete old refresh token
                 refreshTokenRepository.deleteById(tokenId);
-                // Generate new refresh token
                 RefreshToken newRefreshToken = jwtService.generateRefreshToken(user.getId());
-                
-                // Set new refresh token as cookie
                 ResponseCookie cookie = ResponseCookie.from("refreshToken", newRefreshToken.getToken())
                         .httpOnly(true)
-                        .secure(!isLocal) // Set to false in local dev if not using HTTPS
+                        .secure(!isLocal)
                         .path("/auth")
                         .maxAge(Duration.ofDays(7))
                         .sameSite("Strict")
@@ -234,13 +234,29 @@ public class UserService {
         }
     }
 
-    public ResponseEntity<List<PropertyDto>> getUserInterestedProperties(String userId) {
+    public ResponseEntity<UserInterestedPropertiesResponse> getUserInterestedProperties(
+            String userId, 
+            int page, 
+            int size) {
         try {
-            List<Interest> interests = interestRepository.findByUserId(userId);
-            log.info("Interest List Size :{} ",interests.size());
-            List<Property> properties = findPropertiesByInterests(interests);
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            
+            Page<Interest> interestsPage = interestRepository.findByUserId(userId, pageable);
+            
+            List<Property> properties = findPropertiesByInterests(interestsPage.getContent());
             List<PropertyDto> propertyDtos = propertyUtils.mapPropertyListToPropertyDtoList(properties);
-            return ResponseEntity.ok(propertyDtos);
+            
+            UserInterestedPropertiesResponse response = new UserInterestedPropertiesResponse(
+                propertyDtos,
+                interestsPage.getTotalElements(),
+                interestsPage.getNumber(),
+                interestsPage.getTotalPages(),
+                interestsPage.hasNext(),
+                interestsPage.hasPrevious()
+            );
+            
+            log.info("Retrieved {} interested properties for user: {}", interestsPage.getNumberOfElements(), userId);
+            return ResponseEntity.ok(response);
         } catch (Exception ex) {
             log.error("Error fetching interested properties: {}", ex.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
