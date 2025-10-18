@@ -3,8 +3,10 @@ package com.circlerate.circle_rate.listing.payload;
 import com.circlerate.circle_rate.listing.model.property.Property;
 import com.circlerate.circle_rate.listing.model.property.ResidentialProperty;
 import com.circlerate.circle_rate.listing.model.propertyenums.FurnishingStatus;
+import com.circlerate.circle_rate.listing.model.propertyenums.PropertyType;
 import com.circlerate.circle_rate.listing.model.propertyenums.ResidentialAmenities;
 import com.circlerate.circle_rate.listing.model.propertyenums.SaleType;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -14,6 +16,7 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 @Data
 @NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ResidentialPropertyRequest extends PropertyRequest {
     private ResidentialProperty.ResidentialPropertyType residentialPropertyType;
     private int noOfRooms;
@@ -44,6 +47,7 @@ public class ResidentialPropertyRequest extends PropertyRequest {
         property.setFurnishingStatus(this.furnishingStatus);
         property.setSaleType(this.saleType);
         property.setAmenities(this.amenities);
+        property.setPropertyType(PropertyType.RESIDENTIAL);
         return property;
     }
 

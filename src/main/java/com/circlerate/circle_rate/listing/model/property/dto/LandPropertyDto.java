@@ -1,6 +1,7 @@
 package com.circlerate.circle_rate.listing.model.property.dto;
 
 import com.circlerate.circle_rate.listing.model.property.LandProperty;
+import com.circlerate.circle_rate.listing.model.propertyenums.LandAmenities;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -15,16 +16,16 @@ import java.util.List;
 @NoArgsConstructor
 public class LandPropertyDto extends PropertyDto{
     private List<LandProperty.Suitability> suitability;
+    private List<LandAmenities> amenities;
 
     public LandPropertyDto(LandProperty property) {
-        super(property); // copies base Property fields
+        super(property);
 
         this.suitability = property.getSuitability() != null
                 ? new ArrayList<>(property.getSuitability()) // defensive copy
                 : null;
+        this.amenities = property.getAmenities();
     }
 
-    public static LandPropertyDto mapLandPropertyToLandPropertyDto(LandProperty landProperty){
-        return null;
-    }
+
 }

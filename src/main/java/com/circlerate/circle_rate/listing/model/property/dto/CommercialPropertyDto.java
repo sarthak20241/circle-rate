@@ -1,6 +1,7 @@
 package com.circlerate.circle_rate.listing.model.property.dto;
 
 import com.circlerate.circle_rate.listing.model.property.CommercialProperty;
+import com.circlerate.circle_rate.listing.model.propertyenums.CommercialAmenities;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -18,7 +19,7 @@ public class CommercialPropertyDto extends PropertyDto {
     private int buildingFloor;
     private boolean isPrivateWashroomAvailable;
     private boolean isPublicWashroomAvailable;
-    private String amenities;
+    private List<CommercialAmenities> amenities;
 
     public CommercialPropertyDto(CommercialProperty property) {
         super(property); // copies base Property fields
@@ -31,10 +32,6 @@ public class CommercialPropertyDto extends PropertyDto {
         this.isPrivateWashroomAvailable = property.isPrivateWashroomAvailable();
         this.isPublicWashroomAvailable = property.isPublicWashroomAvailable();
         this.amenities = property.getAmenities();
-    }
-
-    public static CommercialPropertyDto mapCommercialPropertyToCommercialPropertyDto(CommercialProperty commercialProperty){
-        return new CommercialPropertyDto(commercialProperty);
     }
 
 }

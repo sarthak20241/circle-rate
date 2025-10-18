@@ -17,13 +17,13 @@ import java.util.Date;
 public class RefreshToken {
     @Id
     private String id;
-    private String email;
+    private String userId;
     private String token;
     private Date issuedAt;
     private Date expiresAt;
 
-    public RefreshToken(String email, Date issuedAt, Date expiresAt){
-        this.email = email;
+    public RefreshToken(String userId, Date issuedAt, Date expiresAt){
+        this.userId = userId;
         this.issuedAt = issuedAt;
         this.expiresAt = expiresAt;
     }

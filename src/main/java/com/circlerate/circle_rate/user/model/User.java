@@ -2,6 +2,8 @@ package com.circlerate.circle_rate.user.model;
 
 import com.circlerate.circle_rate.auth.model.LoginType;
 import com.circlerate.circle_rate.auth.model.Role;
+
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
@@ -18,6 +20,7 @@ import java.util.*;
 @Data
 @Document("users")
 @Component
+@AllArgsConstructor
 @NoArgsConstructor
 public class User implements UserDetails {
     @Id
@@ -26,6 +29,11 @@ public class User implements UserDetails {
     private String email;
     private String firstName;
     private String lastName;
+    private String contactNo;
+    private String aboutMe;
+
+    private String profilePictureKey;
+    
     private String encodedPassword;
     private LoginType loginType;
     private Role role;

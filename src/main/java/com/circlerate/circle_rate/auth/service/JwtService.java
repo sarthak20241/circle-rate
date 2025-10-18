@@ -52,26 +52,26 @@ public class JwtService {
         return expiration.after(new Date());
     }
 
-    public AccessToken generateAccessToken(String email, Role role) {
+    public AccessToken generateAccessToken(String userId, Role role) {
         Date issuedAt = new Date();
         Date expiration = new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRATION);
         String token = Jwts.builder()
-                .subject(email)
+                .subject(userId)
                 .claim(GlobalConstants.ROLE_CLAIM, role.name())
                 .issuedAt(issuedAt)
                 .expiration(expiration)
                 .signWith(signingKey)
                 .compact();
-        return new AccessToken(email, role, token, issuedAt, expiration);
+        return new AccessToken(userId, role, token, issuedAt, expiration);
     }
 
-    public RefreshToken generateRefreshToken(String email) {
+    public RefreshToken generateRefreshToken(String userId) {
         Date issuedAt = new Date();
         Date expiration = new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRATION);
-        RefreshToken refreshToken = new RefreshToken(email, issuedAt, expiration);
+        RefreshToken refreshToken = new RefreshToken(userId, issuedAt, expiration);
         refreshToken = refreshTokenRepository.save(refreshToken); //saved token to fetch _id
         String token = Jwts.builder()
-                .subject(email)
+                .subject(userId)
                 .issuedAt(issuedAt)
                 .claim("tokenId", refreshToken.getId())
                 .expiration(expiration)

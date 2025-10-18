@@ -9,6 +9,7 @@ import com.circlerate.circle_rate.user.model.TempProfile;
 import com.circlerate.circle_rate.user.model.User;
 import com.circlerate.circle_rate.user.repository.UserRepository;
 import com.circlerate.circle_rate.user.service.ApprovalService;
+import com.circlerate.circle_rate.user.payload.UserProfileUpdateRequest;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,8 +24,6 @@ public class UserServiceUtils {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final ApprovalService approvalService;
-
-    
 
     public User createUser(SignupRequest request){
         Optional<User> optionalUser = userRepository.findByEmail(request.getEmail());
@@ -50,5 +49,13 @@ public class UserServiceUtils {
             user.setUserProfile(new ClientProfile());
         }
         return userRepository.save(user);
+    }
+
+    public void updateUserProfile(User user, UserProfileUpdateRequest request) {
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        user.setEmail(request.getEmail());
+        user.setContactNo(request.getContactNo());
+        user.setAboutMe(request.getAboutme());
     }
 }
