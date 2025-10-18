@@ -25,75 +25,59 @@ public class LandPropertyService {
     private final LandPropertyRepository landPropertyRepository;
 
     public ResponseEntity<LandPropertyDto> createProperty(LandPropertyRequest request, String userId) {
-        try {
-            LandProperty property = (LandProperty) request.toEntity();
-            User user = userRepository.findById(userId).orElseThrow(()-> new UserNotFoundException(ResponseMessage.USER_NOT_FOUND));
-            property.setOwnerId(userId);
-            property.setOwnerName(user.getFirstName()+" "+ user.getLastName());
-            
-            LandProperty savedProperty = landPropertyRepository.save(property);
-            LandPropertyDto propertyDto = new LandPropertyDto(savedProperty);
+        LandProperty property = (LandProperty) request.toEntity();
+        User user = userRepository.findById(userId).orElseThrow(()-> new UserNotFoundException(ResponseMessage.USER_NOT_FOUND));
+        property.setOwnerId(userId);
+        property.setOwnerName(user.getFirstName()+" "+ user.getLastName());
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(propertyDto);
-        } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        LandProperty savedProperty = landPropertyRepository.save(property);
+        LandPropertyDto propertyDto = new LandPropertyDto(savedProperty);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(propertyDto);
     }
 
     public ResponseEntity<List<LandPropertyDto>> getUserProperties(String userId) {
-        try {
-            List<LandProperty> userProperties = landPropertyRepository.findByOwnerId(userId);
-            List<LandPropertyDto> propertyDtos = userProperties.stream()
-                    .map(LandPropertyDto::new)
-                    .toList();
-            return ResponseEntity.ok(propertyDtos);
-        } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        List<LandProperty> userProperties = landPropertyRepository.findByOwnerId(userId);
+        List<LandPropertyDto> propertyDtos = userProperties.stream()
+                .map(LandPropertyDto::new)
+                .toList();
+        return ResponseEntity.ok(propertyDtos);
     }
 
     public ResponseEntity<LandPropertyDto> updateProperty(String userId, String propertyId, LandPropertyRequest request) {
-        try {
-            var existingProperty = landPropertyRepository.findById(propertyId);
-            if (existingProperty.isEmpty()) {
-                throw new PropertyNotFoundException(ResponseMessage.PROPERTY_NOT_FOUND);
-            }
-            
-            LandProperty property = existingProperty.get();
-            if (!property.getOwnerId().equals(userId)) {
-                throw new UserNotAuthorizedException(ResponseMessage.USER_NOT_AUTHORIZED);
-            }
-            
-            // Update property fields
-            property.setTitle(request.getTitle());
-            property.setAbout(request.getAbout());
-            property.setExpectedPriceInRupees(request.getExpectedPriceInRupees());
-            property.setAreaInSqFt(request.getAreaInSqFt());
-            property.setAddress(request.getAddress());
-            property.setSuitability(request.getSuitability());
-            
-            LandProperty updatedProperty = landPropertyRepository.save(property);
-            return ResponseEntity.ok(new LandPropertyDto(updatedProperty));
-        } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        var existingProperty = landPropertyRepository.findById(propertyId);
+        if (existingProperty.isEmpty()) {
+            throw new PropertyNotFoundException(ResponseMessage.PROPERTY_NOT_FOUND);
         }
+
+        LandProperty property = existingProperty.get();
+        if (!property.getOwnerId().equals(userId)) {
+            throw new UserNotAuthorizedException(ResponseMessage.USER_NOT_AUTHORIZED);
+        }
+
+        // Update property fields
+        property.setTitle(request.getTitle());
+        property.setAbout(request.getAbout());
+        property.setExpectedPriceInRupees(request.getExpectedPriceInRupees());
+        property.setAreaInSqFt(request.getAreaInSqFt());
+        property.setAddress(request.getAddress());
+        property.setSuitability(request.getSuitability());
+
+        LandProperty updatedProperty = landPropertyRepository.save(property);
+        return ResponseEntity.ok(new LandPropertyDto(updatedProperty));
     }
 
     public ResponseEntity<String> deleteProperty(String userId, String propertyId) {
-        try {
-            var property = landPropertyRepository.findById(propertyId);
-            if (property.isEmpty()) {
-                throw new PropertyNotFoundException(ResponseMessage.PROPERTY_NOT_FOUND);
-            }
-            
-            if (!property.get().getOwnerId().equals(userId)) {
-                throw new UserNotAuthorizedException(ResponseMessage.USER_NOT_AUTHORIZED);
-            }
-            
-            landPropertyRepository.deleteById(propertyId);
-            return ResponseEntity.ok(ResponseMessage.PROPERTY_DELETED);
-        } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        var property = landPropertyRepository.findById(propertyId);
+        if (property.isEmpty()) {
+            throw new PropertyNotFoundException(ResponseMessage.PROPERTY_NOT_FOUND);
         }
+
+        if (!property.get().getOwnerId().equals(userId)) {
+            throw new UserNotAuthorizedException(ResponseMessage.USER_NOT_AUTHORIZED);
+        }
+
+        landPropertyRepository.deleteById(propertyId);
+        return ResponseEntity.ok(ResponseMessage.PROPERTY_DELETED);
     }
 }

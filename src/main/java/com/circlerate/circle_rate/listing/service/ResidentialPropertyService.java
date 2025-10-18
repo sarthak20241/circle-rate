@@ -24,17 +24,13 @@ public class ResidentialPropertyService {
     private final ResidentialPropertyRepository residentialPropertyRepository;
 
     public ResponseEntity<ResidentialPropertyDto> createProperty(ResidentialPropertyRequest request, String userId) {
-        try {
-            ResidentialProperty property = (ResidentialProperty) request.toEntity();
-            User user = userRepository.findById(userId).orElseThrow(()-> new UserNotFoundException(ResponseMessage.USER_NOT_FOUND));
-            property.setOwnerId(userId);
-            property.setOwnerName(user.getFirstName()+" "+ user.getLastName());
-            ResidentialProperty savedProperty = residentialPropertyRepository.save(property);
-            
-            return ResponseEntity.status(HttpStatus.CREATED).body(new ResidentialPropertyDto(savedProperty));
-        } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        ResidentialProperty property = (ResidentialProperty) request.toEntity();
+        User user = userRepository.findById(userId).orElseThrow(()-> new UserNotFoundException(ResponseMessage.USER_NOT_FOUND));
+        property.setOwnerId(userId);
+        property.setOwnerName(user.getFirstName()+" "+ user.getLastName());
+        ResidentialProperty savedProperty = residentialPropertyRepository.save(property);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(new ResidentialPropertyDto(savedProperty));
     }
 
     public ResponseEntity<List<ResidentialPropertyDto>> getUserProperties(String userId) {
@@ -50,57 +46,49 @@ public class ResidentialPropertyService {
     }
 
     public ResponseEntity<ResidentialPropertyDto> updateProperty(String userId, String propertyId, ResidentialPropertyRequest request) {
-        try {
-            var existingProperty = residentialPropertyRepository.findById(propertyId);
-            if (existingProperty.isEmpty()) {
-                throw new PropertyNotFoundException(ResponseMessage.PROPERTY_NOT_FOUND);
-            }
-            
-            ResidentialProperty property = existingProperty.get();
-            if (!property.getOwnerId().equals(userId)) {
-                throw new UserNotAuthorizedException(ResponseMessage.USER_NOT_AUTHORIZED);
-            }
-            
-            // Update property fields
-            property.setTitle(request.getTitle());
-            property.setAbout(request.getAbout());
-            property.setExpectedPriceInRupees(request.getExpectedPriceInRupees());
-            property.setAreaInSqFt(request.getAreaInSqFt());
-            property.setAddress(request.getAddress());
-            property.setNoOfRooms(request.getNoOfRooms());
-            property.setNoOfWashrooms(request.getNoOfWashrooms());
-            property.setNoOfBalconies(request.getNoOfBalconies());
-            property.setPropertyFloor(request.getPropertyFloor());
-            property.setTotalFloors(request.getTotalFloors());
-            property.setAgeOfProperty(request.getAgeOfProperty());
-            property.setFacing(request.getFacing());
-            property.setReraApproved(request.isReraApproved());
-            property.setFurnishingStatus(request.getFurnishingStatus());
-            property.setSaleType(request.getSaleType());
-            property.setAmenities(request.getAmenities());
-            
-            ResidentialProperty updatedProperty = residentialPropertyRepository.save(property);
-            return ResponseEntity.ok(new ResidentialPropertyDto(updatedProperty));
-        } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        var existingProperty = residentialPropertyRepository.findById(propertyId);
+        if (existingProperty.isEmpty()) {
+            throw new PropertyNotFoundException(ResponseMessage.PROPERTY_NOT_FOUND);
         }
+
+        ResidentialProperty property = existingProperty.get();
+        if (!property.getOwnerId().equals(userId)) {
+            throw new UserNotAuthorizedException(ResponseMessage.USER_NOT_AUTHORIZED);
+        }
+
+        // Update property fields
+        property.setTitle(request.getTitle());
+        property.setAbout(request.getAbout());
+        property.setExpectedPriceInRupees(request.getExpectedPriceInRupees());
+        property.setAreaInSqFt(request.getAreaInSqFt());
+        property.setAddress(request.getAddress());
+        property.setNoOfRooms(request.getNoOfRooms());
+        property.setNoOfWashrooms(request.getNoOfWashrooms());
+        property.setNoOfBalconies(request.getNoOfBalconies());
+        property.setPropertyFloor(request.getPropertyFloor());
+        property.setTotalFloors(request.getTotalFloors());
+        property.setAgeOfProperty(request.getAgeOfProperty());
+        property.setFacing(request.getFacing());
+        property.setReraApproved(request.isReraApproved());
+        property.setFurnishingStatus(request.getFurnishingStatus());
+        property.setSaleType(request.getSaleType());
+        property.setAmenities(request.getAmenities());
+
+        ResidentialProperty updatedProperty = residentialPropertyRepository.save(property);
+        return ResponseEntity.ok(new ResidentialPropertyDto(updatedProperty));
     }
 
     public ResponseEntity<String> deleteProperty(String userId, String propertyId) {
-        try {
-            var property = residentialPropertyRepository.findById(propertyId);
-            if (property.isEmpty()) {
-                throw new PropertyNotFoundException(ResponseMessage.PROPERTY_NOT_FOUND);
-            }
-            
-            if (!property.get().getOwnerId().equals(userId)) {
-                throw new UserNotAuthorizedException(ResponseMessage.USER_NOT_AUTHORIZED);
-            }
-            
-            residentialPropertyRepository.deleteById(propertyId);
-            return ResponseEntity.ok(ResponseMessage.PROPERTY_DELETED);
-        } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        var property = residentialPropertyRepository.findById(propertyId);
+        if (property.isEmpty()) {
+            throw new PropertyNotFoundException(ResponseMessage.PROPERTY_NOT_FOUND);
         }
+
+        if (!property.get().getOwnerId().equals(userId)) {
+            throw new UserNotAuthorizedException(ResponseMessage.USER_NOT_AUTHORIZED);
+        }
+
+        residentialPropertyRepository.deleteById(propertyId);
+        return ResponseEntity.ok(ResponseMessage.PROPERTY_DELETED);
     }
 }
