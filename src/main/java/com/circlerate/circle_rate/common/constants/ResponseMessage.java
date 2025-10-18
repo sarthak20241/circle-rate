@@ -20,5 +20,7 @@ public final class ResponseMessage {
     public static final String PROPERTY_TYPE_REQUIRED = "Property type is required for this operation";
     public static final String IMAGE_DELETED_SUCCESSFULLY = "Image deleted successfully";
     public static final String NOT_AUTHORIZED_TO_DELETE_IMAGES = "User are not authorized to delete images from this property";
-    public static final String IMAGE_NOT_FOUND_IN_PROPERTY = "Image not found in property media";
+    public static final String PROPERTY_HAS_NO_MEDIA = "Property has no media";
+    public static final String PROPERTY_AVAILABILITY_UPDATED = "Property availability updated successfully";
+    public static final String USER_DELETED_SUCCESSFULLY = "User deleted successfully";
 }

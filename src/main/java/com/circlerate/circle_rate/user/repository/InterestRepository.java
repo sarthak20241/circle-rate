@@ -11,5 +11,7 @@ public interface InterestRepository extends MongoRepository<Interest, String> {
     Page<Interest> findByUserId(String userId, Pageable pageable);
     boolean existsByUserIdAndPropertyId(String userId, String propertyId);
     void deleteByUserIdAndPropertyId(String userId, String propertyId);
+    void deleteByUserId(String userId);
     Page<Interest> findByPropertyId(String propertyId, Pageable pageable);
+    void deleteByPropertyId(String propertyId);
 }

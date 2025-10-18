@@ -60,6 +60,12 @@ public class UserController {
         return userService.updateUserProfile(userId, request);
     }
 
+    @DeleteMapping("/profile")
+    public ResponseEntity<String> deleteUser(Authentication authentication) {
+        String userId = authentication.getName();
+        return userService.deleteUser(userId);
+    }
+
     @PostMapping("/profile/picture/upload-url")
     public ResponseEntity<PresignedUrlResponse> getProfilePictureUploadUrl(
             @RequestBody @Valid ProfilePictureUploadRequest request,

@@ -3,15 +3,30 @@ package com.circlerate.circle_rate.listing.payload;
 import com.circlerate.circle_rate.listing.model.property.Property;
 import com.circlerate.circle_rate.listing.model.propertyenums.ListingType;
 import com.circlerate.circle_rate.listing.model.propertyenums.OwnerType;
+import com.circlerate.circle_rate.listing.model.propertyenums.PropertyType;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
 
+@JsonTypeInfo(
+    use = JsonTypeInfo.Id.NAME,
+    include = JsonTypeInfo.As.EXISTING_PROPERTY,
+    property = "propertyType",
+    visible = true
+)
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = ResidentialPropertyRequest.class, name = "RESIDENTIAL"),
+    @JsonSubTypes.Type(value = CommercialPropertyRequest.class, name = "COMMERCIAL"),
+    @JsonSubTypes.Type(value = LandPropertyRequest.class, name = "LAND")
+})
 @Data
 @NoArgsConstructor
 public abstract class PropertyRequest {
+    private PropertyType propertyType;
     private String title;
     private String about;
     private long expectedPriceInRupees;
@@ -30,6 +45,7 @@ public abstract class PropertyRequest {
     public abstract Property toEntity();
 
     protected void copyCommonFields(Property property) {
+        property.setPropertyType(this.propertyType);
         property.setTitle(this.title);
         property.setAbout(this.about);
         property.setExpectedPriceInRupees(this.expectedPriceInRupees);

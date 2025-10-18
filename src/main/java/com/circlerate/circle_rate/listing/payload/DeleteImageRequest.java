@@ -1,10 +1,13 @@
 package com.circlerate.circle_rate.listing.payload;
 
+import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
-import jakarta.validation.constraints.NotBlank;
+
+
+import java.util.List;
 
 @Data
 public class DeleteImageRequest {
-    @NotBlank(message = "S3 key is required")
-    private String s3Key;
+    @NotEmpty(message = "no s3 keys provided to delete")
+    private List<String> s3Keys;
 }

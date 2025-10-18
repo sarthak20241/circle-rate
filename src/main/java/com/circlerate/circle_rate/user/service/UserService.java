@@ -17,12 +17,16 @@ import com.circlerate.circle_rate.user.payload.ProfilePictureUploadRequest;
 import com.circlerate.circle_rate.user.payload.UserInterestedPropertiesResponse;
 import com.circlerate.circle_rate.user.payload.UserProfileUpdateRequest;
 import com.circlerate.circle_rate.listing.model.property.Property;
+import com.circlerate.circle_rate.listing.model.property.ResidentialProperty;
+import com.circlerate.circle_rate.listing.model.property.CommercialProperty;
+import com.circlerate.circle_rate.listing.model.property.LandProperty;
 import com.circlerate.circle_rate.listing.model.property.dto.PropertyDto;
 import com.circlerate.circle_rate.listing.payload.PresignedUrlResponse;
 import com.circlerate.circle_rate.listing.repository.ResidentialPropertyRepository;
 import com.circlerate.circle_rate.listing.repository.CommercialPropertyRepository;
 import com.circlerate.circle_rate.listing.repository.LandPropertyRepository;
 import com.circlerate.circle_rate.listing.repository.PropertyQueryRepository;
+import com.circlerate.circle_rate.listing.service.PropertyListingService;
 import com.circlerate.circle_rate.listing.utils.PropertyUtils;
 import com.circlerate.circle_rate.user.repository.InterestRepository;
 import com.circlerate.circle_rate.common.exception.custom_exception.UserNotFoundException;
@@ -70,6 +74,7 @@ public class UserService {
     private final CommercialPropertyRepository commercialPropertyRepository;
     private final LandPropertyRepository landPropertyRepository;
     private final PropertyQueryRepository propertyQueryRepository;
+    private final PropertyListingService propertyListingService;
     private final PropertyUtils propertyUtils;
     private final S3Service s3Service;
 
@@ -435,6 +440,81 @@ public class UserService {
             return ResponseEntity.ok(new PresignedUrlResponse(null, null));
         }
         return ResponseEntity.ok(new PresignedUrlResponse(s3Service.generateGetPresignedUrl(profilePictureKey), profilePictureKey));
+    }
+
+    public ResponseEntity<String> deleteUser(String userId) {
+        try {
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (userOpt.isEmpty()) {
+                throw new UserNotFoundException(ResponseMessage.USER_NOT_FOUND);
+            }
+            
+            User user = userOpt.get();
+            
+            interestRepository.deleteByUserId(userId);
+            log.info("Deleted all interests for user: {}", userId);
+            
+            deleteUserProperties(userId);
+            log.info("Deleted all properties for user: {}", userId);
+            
+            if (user.getProfilePictureKey() != null && !user.getProfilePictureKey().isEmpty()) {
+                try {
+                    s3Service.deleteObject(user.getProfilePictureKey());
+                    log.info("Deleted profile picture from S3 for user: {}", userId);
+                } catch (Exception ex) {
+                    log.warn("Failed to delete profile picture from S3 for user: {} - {}", userId, ex.getMessage());
+                }
+            }
+            
+            refreshTokenRepository.deleteByUserId(userId);
+            log.info("Deleted refresh tokens for user: {}", userId);
+            
+            userRepository.deleteById(userId);
+            log.info("User deleted successfully: {}", user.getEmail());
+            
+            return ResponseEntity.ok(ResponseMessage.USER_DELETED_SUCCESSFULLY);
+        } catch (Exception ex) {
+            log.error("Error deleting user: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error deleting user: " + ex.getMessage());
+        }
+    }
+    
+    private void deleteUserProperties(String userId) {
+        List<ResidentialProperty> residentialProperties = residentialPropertyRepository.findByOwnerId(userId);
+        for (ResidentialProperty property : residentialProperties) {
+            try {
+                propertyListingService.deletePropertyImages(property);
+                interestRepository.deleteByPropertyId(property.getId());
+                residentialPropertyRepository.deleteById(property.getId());
+                log.info("Deleted residential property: {}", property.getId());
+            } catch (Exception ex) {
+                log.warn("Failed to delete residential property: {} - {}", property.getId(), ex.getMessage());
+            }
+        }
+        
+        List<CommercialProperty> commercialProperties = commercialPropertyRepository.findByOwnerId(userId);
+        for (CommercialProperty property : commercialProperties) {
+            try {
+                propertyListingService.deletePropertyImages(property);
+                interestRepository.deleteByPropertyId(property.getId());
+                commercialPropertyRepository.deleteById(property.getId());
+                log.info("Deleted commercial property: {}", property.getId());
+            } catch (Exception ex) {
+                log.warn("Failed to delete commercial property: {} - {}", property.getId(), ex.getMessage());
+            }
+        }
+        
+        List<LandProperty> landProperties = landPropertyRepository.findByOwnerId(userId);
+        for (LandProperty property : landProperties) {
+            try {
+                propertyListingService.deletePropertyImages(property);
+                interestRepository.deleteByPropertyId(property.getId());
+                landPropertyRepository.deleteById(property.getId());
+                log.info("Deleted land property: {}", property.getId());
+            } catch (Exception ex) {
+                log.warn("Failed to delete land property: {} - {}", property.getId(), ex.getMessage());
+            }
+        }
     }
 
 }

@@ -117,7 +117,7 @@ public class PropertyListingService {
     public PresignedUrlBatchResponse generatePropertyImagesPutPresignedUrls(String propertyId, String propertyType, PresignedUrlRequest request) {
         Property property = propertyQueryRepository.findPropertyByIdAndType(propertyId, propertyType);
         if (property == null) {
-            throw new PropertyNotFoundException("Property not found with id: " + propertyId + " and type: " + propertyType);
+            throw new PropertyNotFoundException(ResponseMessage.PROPERTY_NOT_FOUND);
         }
 
         int currentImages = property.getNoOfImages();
@@ -187,7 +187,7 @@ public class PropertyListingService {
     public void updatePropertyMedia(String propertyId, String propertyType, List<String> mediaKeys) {
         Property property = propertyQueryRepository.findPropertyByIdAndType(propertyId, propertyType);
         if (property == null) {
-            throw new PropertyNotFoundException("Property not found with id: " + propertyId + " and type: " + propertyType);
+            throw new PropertyNotFoundException(ResponseMessage.PROPERTY_NOT_FOUND);
         }
 
         if (mediaKeys != null && !mediaKeys.isEmpty()) {
@@ -231,7 +231,7 @@ public class PropertyListingService {
     public ResponseEntity<List<PresignedUrlResponse>> getPropertyImagesURL(String propertyId, String propertyType) {
         Property property = propertyQueryRepository.findPropertyByIdAndType(propertyId, propertyType);
         if (property == null) {
-            throw new PropertyNotFoundException("Property not found with id: " + propertyId + " and type: " + propertyType);
+            throw new PropertyNotFoundException(ResponseMessage.PROPERTY_NOT_FOUND);
         }
         List<String> mediaKeys = property.getMediaKeys();
         if (mediaKeys == null || mediaKeys.isEmpty()) {
@@ -244,34 +244,41 @@ public class PropertyListingService {
         return ResponseEntity.ok(presignedUrls);
     }
 
-    public ResponseEntity<String> deletePropertyImage(String propertyId, String propertyType, String s3Key, String userId) {
+    public ResponseEntity<String> deletePropertyImage(String propertyId, String propertyType, List<String> s3Keys, String userId) {
         Property property = propertyQueryRepository.findPropertyByIdAndType(propertyId, propertyType);
         if (property == null) {
-            throw new PropertyNotFoundException("Property not found with id: " + propertyId);
+            throw new PropertyNotFoundException(ResponseMessage.PROPERTY_NOT_FOUND);
         }
         
         if (!property.getOwnerId().equals(userId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ResponseMessage.NOT_AUTHORIZED_TO_DELETE_IMAGES);
         }
-        if (property.getMediaKeys() == null || !property.getMediaKeys().contains(s3Key)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ResponseMessage.IMAGE_NOT_FOUND_IN_PROPERTY);
+        if(property.getMediaKeys() == null || property.getMediaKeys().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ResponseMessage.PROPERTY_HAS_NO_MEDIA);
         }
-        s3Service.deleteObject(s3Key);
-        property.getMediaKeys().remove(s3Key);
-        
-        if (s3Key.startsWith("property/images/")) {
-            property.setNoOfImages(property.getNoOfImages() - 1);
-        } else if (s3Key.startsWith("property/videos/")) {
-            property.setNoOfVideos(property.getNoOfVideos() - 1);
+        int deletedImages = 0;
+        int deletedVideos = 0;
+        for (String s3Key : s3Keys) {
+            if (property.getMediaKeys().contains(s3Key)) {
+                s3Service.deleteObject(s3Key);
+                property.getMediaKeys().remove(s3Key);
+                if (s3Key.startsWith("property/images/")) {
+                    deletedImages++;
+                } else if (s3Key.startsWith("property/videos/")) {
+                    deletedVideos++;
+                }
+            }
+            else {
+                log.error("Image not found in property: {}", s3Key);
+            }
         }
-        
+        property.setNoOfImages(property.getNoOfImages() - deletedImages);
+        property.setNoOfVideos(property.getNoOfVideos() - deletedVideos);
         if (property.getMediaKeys().isEmpty()) {
             property.setMediaKeys(null);
         }
-        
         savePropertyToCorrectRepository(property, propertyType);
-        
-        log.info("Image deleted successfully: {} from property: {}", s3Key, propertyId);
+        log.info("{} Media Files deleted successfully:  from property: {}", deletedImages + deletedVideos , propertyId);
         return ResponseEntity.ok(ResponseMessage.IMAGE_DELETED_SUCCESSFULLY);
     }
 
@@ -306,5 +313,14 @@ public class PropertyListingService {
         
         log.info("Retrieved {} interested users for property: {}", interestsPage.getNumberOfElements(), propertyId);
         return ResponseEntity.ok(response);
+    }
+
+    public void deletePropertyImages(Property property) {
+        List<String> mediaKeys = property.getMediaKeys();
+        if (mediaKeys != null) {
+            for (String mediaKey : mediaKeys) {
+                s3Service.deleteObject(mediaKey);
+            }
+        }
     }
 }
