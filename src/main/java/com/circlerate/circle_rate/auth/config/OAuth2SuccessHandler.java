@@ -40,63 +40,63 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private final UserServiceUtils userServiceUtils;
     private final UserRepository userRepository;
 
-    
-
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
-                                        Authentication authentication) throws IOException {
+            Authentication authentication) throws IOException {
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
 
         String firstName = oAuth2User.getAttribute("given_name");
         String lastName = oAuth2User.getAttribute("family_name");
         String email = oAuth2User.getAttribute("email");
-        log.info("google authentication successful for email: {} ",email);
+        log.info("google authentication successful for email: {} ", email);
 
         User user;
         AuthResponse authResponse;
         int httpStatus = HttpServletResponse.SC_CREATED;
-        if(!userRepository.existsByEmail(email)){
-            //google signup
+        if (!userRepository.existsByEmail(email)) {
+            // google signup
             String state = request.getParameter("state");
             String role;
-            try{
+            try {
                 role = new String(Base64.getDecoder().decode(state));
-            }
-            catch (IllegalArgumentException ex){
-                CommonUtility.writeResponse(response, new ErrorMessage(HttpStatus.FORBIDDEN.value(),"User Not Signed Up"),HttpServletResponse.SC_FORBIDDEN);
+            } catch (IllegalArgumentException ex) {
+                CommonUtility.writeResponse(response,
+                        new ErrorMessage(HttpStatus.FORBIDDEN.value(), "User Not Signed Up"),
+                        HttpServletResponse.SC_FORBIDDEN);
                 return;
             }
 
-            SignupRequest signupRequest = new SignupRequest(email,"google-signup",firstName,lastName, Role.valueOf(role), LoginType.GOOGLE);
-            try{
+            SignupRequest signupRequest = new SignupRequest(email, "google-signup", firstName, lastName,
+                    Role.valueOf(role), LoginType.GOOGLE);
+            try {
                 user = userServiceUtils.createUser(signupRequest);
-                if((user.getRole() != signupRequest.getRole())){
-                    log.info("user created without role: {} permissions", signupRequest.getRole() );
+                if ((user.getRole() != signupRequest.getRole())) {
+                    log.info("user created without role: {} permissions", signupRequest.getRole());
                     authResponse = new AuthResponse(user.getEmail(), ResponseMessage.APPROVAL_RAISED);
-                }
-                else{
+                } else {
                     log.info("User Successfully Created");
-                    authResponse =  new AuthResponse(user.getEmail(), ResponseMessage.USER_CREATED);
+                    authResponse = new AuthResponse(user.getEmail(), ResponseMessage.USER_CREATED);
                 }
-            }
-            catch (UserAlreadyExistsException ex){
-                CommonUtility.writeResponse(response, new ErrorMessage(HttpStatus.CONFLICT.value(),ex.getMessage()),HttpServletResponse.SC_CONFLICT);
+            } catch (UserAlreadyExistsException ex) {
+                CommonUtility.writeResponse(response, new ErrorMessage(HttpStatus.CONFLICT.value(), ex.getMessage()),
+                        HttpServletResponse.SC_CONFLICT);
                 return;
             }
-        }
-        else{
-            //google login
+        } else {
+            // google login
             user = userRepository.findByEmail(email).get();
-            if(!user.getLoginType().equals(LoginType.GOOGLE)){
+            if (!user.getLoginType().equals(LoginType.GOOGLE)) {
                 log.info("User logged in with different login type: {}", user.getLoginType());
-                CommonUtility.writeResponse(response, new AuthResponse(email, ResponseMessage.USER_SIGNEDUP_WITH_DIFFERENT_LOGIN_TYPE + user.getLoginType()), HttpServletResponse.SC_CONFLICT);
+                CommonUtility.writeResponse(response,
+                        new AuthResponse(email,
+                                ResponseMessage.USER_SIGNEDUP_WITH_DIFFERENT_LOGIN_TYPE + user.getLoginType()),
+                        HttpServletResponse.SC_CONFLICT);
                 return;
             }
             log.info("User Successfully logged in with user email: {}", user.getEmail());
             authResponse = new AuthResponse(user.getEmail(), ResponseMessage.USER_SUCCESSFULLY_LOGGED_IN);
             httpStatus = HttpServletResponse.SC_OK;
         }
-
 
         AccessToken accessToken = jwtService.generateAccessToken(user.getEmail(), user.getRole());
         authResponse.setAccessToken(accessToken.getToken());
@@ -112,7 +112,18 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        String redirectUrl = "http://localhost:5173/oauth2/redirect"
+                + "?message=" + authResponse.getMessage(); // message in url itself, because redirect response body is
+                                                           // ignored by browser.
+
+        log.info("Redirecting to frontend: {}", redirectUrl);
+
+        try {
+            response.sendRedirect(redirectUrl);
+        } catch (Exception ex) {
+            log.error("Redirect failed, falling back to JSON response", ex);
+            CommonUtility.writeResponse(response, authResponse, httpStatus);
+        }
         CommonUtility.writeResponse(response, authResponse, httpStatus);
     }
 }
-

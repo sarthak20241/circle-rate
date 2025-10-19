@@ -22,59 +22,58 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 
-
 import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
-    private final JwtAuthFilter jwtAuthFilter;
-    private final AuthenticationProvider authenticationProvider;
-    private final OAuth2SuccessHandler successHandler;
-    private final ClientRegistrationRepository clientRegistrationRepository;
-    private final AuthEntryPoint unauthorizedHandler;
+        private final JwtAuthFilter jwtAuthFilter;
+        private final AuthenticationProvider authenticationProvider;
+        private final OAuth2SuccessHandler successHandler;
+        private final ClientRegistrationRepository clientRegistrationRepository;
+        private final AuthEntryPoint unauthorizedHandler;
 
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+                OAuth2AuthorizationRequestResolver customResolver = new CustomAuthorizationRequestResolver(
+                                clientRegistrationRepository, "/oauth2/authorization");
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        OAuth2AuthorizationRequestResolver customResolver =
-                new CustomAuthorizationRequestResolver(clientRegistrationRepository, "/oauth2/authorization");
+                http
+                                .csrf(AbstractHttpConfigurer::disable)
+                                .cors(Customizer.withDefaults())
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                .authorizeHttpRequests(auth -> auth
+                                                .requestMatchers("/auth/**", "/login/**", "/login", "/error")
+                                                .permitAll()
+                                                .requestMatchers("/**").hasRole(Role.CLIENT.name())
+                                                .requestMatchers("/api/admin/**").hasRole(Role.ADMIN.name())
+                                                .requestMatchers("/api/user/**")
+                                                .hasAnyRole(Role.CLIENT.name(), Role.ADMIN.name())
+                                                .anyRequest().authenticated())
+                                .oauth2Login(oauth2 -> oauth2
+                                                .successHandler(successHandler) // Custom: issue your JWT on Google
+                                                                                // login
+                                                .authorizationEndpoint(config -> config
+                                                                .authorizationRequestResolver(customResolver)))
+                                .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
+                                .authenticationProvider(authenticationProvider)
+                                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
-        http
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(Customizer.withDefaults())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**","/login/**","/login","/error").permitAll()
-                        .requestMatchers("/**").hasRole(Role.CLIENT.name())
-                        .requestMatchers("/api/admin/**").hasRole(Role.ADMIN.name())
-                        .requestMatchers("/api/user/**").hasAnyRole(Role.CLIENT.name(), Role.ADMIN.name())
-                        .anyRequest().authenticated()
-                )
-                .oauth2Login(oauth2 -> oauth2
-                        .successHandler(successHandler) // Custom: issue your JWT on Google login
-                        .authorizationEndpoint(config -> config
-                                .authorizationRequestResolver(customResolver)
-                        )
-                )
-                .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
-                .authenticationProvider(authenticationProvider)
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                return http.build();
+        }
 
-        return http.build();
-    }
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration config = new CorsConfiguration();
+                config.setAllowedOrigins(List.of("http://localhost:5173"));
+                config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
+                config.addAllowedHeader("*");
+                config.setAllowCredentials(true);
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
-        config.addAllowedHeader("*");
-        config.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
-    }
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", config);
+                return source;
+        }
 }
